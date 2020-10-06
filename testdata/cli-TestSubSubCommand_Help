@@ -1,0 +1,14 @@
+Starts a server of some sort
+
+USAGE:
+    start [FLAGS] [ARGUMENTS...]
+
+FLAGS:
+    -h, --help
+	    show help
+
+    -V, --version
+	    print the version
+
+Use "start --help" for more information about a command.
+
