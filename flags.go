@@ -18,13 +18,13 @@ var (
 	HelpFlag = BoolFlag{
 		Name:      "help",
 		Shorthand: "h",
-		Usage:     "show help",
+		Desc:      "show help",
 	}
 
 	VersionFlag = BoolFlag{
 		Name:      "version",
 		Shorthand: "V",
-		Usage:     "print the version",
+		Desc:      "print the version",
 	}
 )
 
@@ -36,7 +36,7 @@ type Flag interface {
 type BoolFlag struct {
 	Name      string
 	Shorthand string
-	Usage     string
+	Desc      string
 	Default   bool
 	Value     bool
 	EnvVar    string
@@ -58,7 +58,7 @@ func (f BoolFlag) GetOption() (Option, error) {
 	return Option{
 		Name:      f.Name,
 		Shorthand: f.Shorthand,
-		Desc:      f.Usage,
+		Desc:      f.Desc,
 		EnvVar:    f.EnvVar,
 		Value:     value,
 		Default:   strconv.FormatBool(f.Default),
@@ -99,7 +99,7 @@ func (f BoolFlag) value(into *bool) (flag.Value, error) {
 type StringFlag struct {
 	Name      string
 	Shorthand string
-	Usage     string
+	Desc      string
 	Default   string
 	Value     string
 	EnvVar    string
@@ -121,7 +121,7 @@ func (f StringFlag) GetOption() (Option, error) {
 	return Option{
 		Name:      f.Name,
 		Shorthand: f.Shorthand,
-		Desc:      f.Usage,
+		Desc:      f.Desc,
 		EnvVar:    f.EnvVar,
 		Value:     value,
 		Default:   f.Default,
@@ -157,7 +157,7 @@ func (f StringFlag) value(into *string) (flag.Value, error) {
 type IntFlag struct {
 	Name      string
 	Shorthand string
-	Usage     string
+	Desc      string
 	Default   int
 	Value     int
 	EnvVar    string
@@ -179,7 +179,7 @@ func (f IntFlag) GetOption() (Option, error) {
 	return Option{
 		Name:      f.Name,
 		Shorthand: f.Shorthand,
-		Desc:      f.Usage,
+		Desc:      f.Desc,
 		EnvVar:    f.EnvVar,
 		Value:     value,
 		Default:   strconv.FormatInt(int64(f.Default), 0),
@@ -220,7 +220,7 @@ func (f IntFlag) value(into *int) (flag.Value, error) {
 type Float64Flag struct {
 	Name      string
 	Shorthand string
-	Usage     string
+	Desc      string
 	Default   float64
 	Value     float64
 	EnvVar    string
@@ -242,7 +242,7 @@ func (f Float64Flag) GetOption() (Option, error) {
 	return Option{
 		Name:      f.Name,
 		Shorthand: f.Shorthand,
-		Desc:      f.Usage,
+		Desc:      f.Desc,
 		EnvVar:    f.EnvVar,
 		Value:     value,
 		Default:   strconv.FormatFloat(f.Default, 0, 0, 64),
@@ -283,7 +283,7 @@ func (f Float64Flag) value(into *float64) (flag.Value, error) {
 type DurationFlag struct {
 	Name      string
 	Shorthand string
-	Usage     string
+	Desc      string
 	Default   time.Duration
 	Value     time.Duration
 	EnvVar    string
@@ -305,7 +305,7 @@ func (f DurationFlag) GetOption() (Option, error) {
 	return Option{
 		Name:      f.Name,
 		Shorthand: f.Shorthand,
-		Desc:      f.Usage,
+		Desc:      f.Desc,
 		EnvVar:    f.EnvVar,
 		Value:     value,
 		Default:   f.Default.String(),
@@ -346,7 +346,7 @@ func (f DurationFlag) value(into *time.Duration) (flag.Value, error) {
 type StringsFlag struct {
 	Name      string
 	Shorthand string
-	Usage     string
+	Desc      string
 	Default   []string
 	Value     []string
 	EnvVar    string
@@ -368,7 +368,7 @@ func (f StringsFlag) GetOption() (Option, error) {
 	return Option{
 		Name:      f.Name,
 		Shorthand: f.Shorthand,
-		Desc:      f.Usage,
+		Desc:      f.Desc,
 		EnvVar:    f.EnvVar,
 		Value:     value,
 		Default:   strings.Join(f.Default, " "),
