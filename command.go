@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -13,6 +14,30 @@ import (
 type Runner interface {
 	Init() Command
 	Run() error
+}
+
+func Run(runner Runner) error {
+	cmd := runner.Init()
+
+	if cmd.commands == nil {
+		cmd.commands = make(map[string]*Command)
+	}
+
+	if cmd.runners == nil {
+		cmd.runners = make(map[string]Runner)
+	}
+
+	if cmd.Version == "" {
+		cmd.Version = "dev"
+	}
+
+	cmd.runners[cmd.Name] = runner
+
+	if err := cmd.parseCommands(os.Args[1:]); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 type Command struct {
@@ -104,18 +129,14 @@ func (c *Command) AddCommands(runners ...Runner) {
 	}
 }
 
-func (c *Command) Run() error {
-	args := os.Args[1:]
-
-	if c.Version == "" {
-		c.Version = "dev"
+func (c *Command) PrintHelp() {
+	if err := renderTemplate(c.Output(), UsageTemplate, c); err != nil {
+		panic(err)
 	}
+}
 
-	if err := c.parseCommands(args); err != nil {
-		return err
-	}
-
-	return nil
+func (c *Command) PrintVersion() {
+	_, _ = fmt.Fprintln(c.Output(), c.Version)
 }
 
 func (c *Command) parseCommands(args []string) error {
@@ -124,20 +145,11 @@ func (c *Command) parseCommands(args []string) error {
 		c.setOutput()
 	}
 
-	if len(args) == 0 {
-		return nil
-	}
-
 	for _, arg := range args {
-		if c.isFlag(arg) {
-			if err := c.parseFlags(args); err != nil {
+		if cmd, ok := c.commands[arg]; ok {
+			if err := cmd.parseFlags(args); err != nil {
 				return err
 			}
-		}
-
-		if cmd, ok := c.commands[arg]; ok {
-			cmd.flags = c.flags
-			cmd.flagUsage = c.flagUsage
 
 			if cmd.Version == "" {
 				cmd.Version = cmd.parent.Version
@@ -147,16 +159,36 @@ func (c *Command) parseCommands(args []string) error {
 				return cmd.parseCommands(args)
 			}
 
-			if err := cmd.parseFlags(args); err != nil {
+			// Subcommand
+			err := c.runners[arg].Run()
+			if errors.Is(err, PrintHelp) {
+				c.commands[arg].PrintHelp()
+				return nil
+			}
+			if err != nil {
 				return err
 			}
 
-			if c.helpRequested(args) || c.versionRequested(args) {
-				return nil
-			}
-
-			return c.runners[arg].Run()
+			return nil
 		}
+	}
+
+	if err := c.parseFlags(args); err != nil {
+		return err
+	}
+
+	if c.helpRequested(args) || c.versionRequested(args) {
+		return nil
+	}
+
+	// Root command
+	err := c.runners[c.Name].Run()
+	if errors.Is(err, PrintHelp) {
+		c.PrintHelp()
+		return nil
+	}
+	if err != nil {
+		return err
 	}
 
 	return nil
@@ -199,19 +231,19 @@ func (c *Command) parseFlags(args []string) error {
 
 		// This flag is not present in the commands list of flags
 		// therefore it is invalid.
-		err := errOptionNotDefined{opt: c.flags[flag], arg: arg}
+		err := ErrOptionNotDefined{opt: c.flags[flag], arg: arg}
 		fmt.Println(err.Error())
-		c.printHelp()
+		c.PrintHelp()
 		os.Exit(0)
 	}
 
 	if c.helpRequested(args) {
-		c.printHelp()
+		c.PrintHelp()
 		return nil
 	}
 
 	if c.versionRequested(args) {
-		c.printVersion()
+		c.PrintVersion()
 		return nil
 	}
 
@@ -363,14 +395,4 @@ func (c *Command) isFlag(arg string) bool {
 		return true
 	}
 	return false
-}
-
-func (c *Command) printHelp() {
-	if err := renderTemplate(c.Output(), UsageTemplate, c); err != nil {
-		panic(err)
-	}
-}
-
-func (c *Command) printVersion() {
-	_, _ = fmt.Fprintln(c.Output(), c.Version)
 }
