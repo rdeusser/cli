@@ -12,8 +12,6 @@ import (
 	"github.com/rdeusser/cli/internal/values"
 )
 
-var errInvalidShorthand = errors.Errorf("shorthand must be a single letter/number")
-
 var (
 	HelpFlag = BoolFlag{
 		Name:      "help",
@@ -74,7 +72,7 @@ func (f BoolFlag) value(into *bool) (flag.Value, error) {
 	}
 
 	if len(f.Shorthand) > 1 {
-		return nil, errInvalidShorthand
+		return nil, ErrInvalidShorthand
 	}
 
 	if !f.Default {
@@ -137,7 +135,7 @@ func (f StringFlag) value(into *string) (flag.Value, error) {
 	}
 
 	if len(f.Shorthand) > 1 {
-		return nil, errInvalidShorthand
+		return nil, ErrInvalidShorthand
 	}
 
 	if f.Default != "" {
@@ -195,7 +193,7 @@ func (f IntFlag) value(into *int) (flag.Value, error) {
 	}
 
 	if len(f.Shorthand) > 1 {
-		return nil, errInvalidShorthand
+		return nil, ErrInvalidShorthand
 	}
 
 	if f.Default != 0 {
@@ -258,7 +256,7 @@ func (f Float64Flag) value(into *float64) (flag.Value, error) {
 	}
 
 	if len(f.Shorthand) > 1 {
-		return nil, errInvalidShorthand
+		return nil, ErrInvalidShorthand
 	}
 
 	if f.Default != 0.0 {
@@ -321,7 +319,7 @@ func (f DurationFlag) value(into *time.Duration) (flag.Value, error) {
 	}
 
 	if len(f.Shorthand) > 1 {
-		return nil, errInvalidShorthand
+		return nil, ErrInvalidShorthand
 	}
 
 	if f.Default != time.Duration(0) {
@@ -384,7 +382,7 @@ func (f StringsFlag) value(into *[]string) (flag.Value, error) {
 	}
 
 	if len(f.Shorthand) > 1 {
-		return nil, errInvalidShorthand
+		return nil, ErrInvalidShorthand
 	}
 
 	if f.Default != nil {

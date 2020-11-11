@@ -6,12 +6,17 @@ import (
 	"github.com/pkg/errors"
 )
 
-type errOptionNotDefined struct {
+var (
+	PrintHelp           = errors.New("help")
+	ErrInvalidShorthand = errors.New("shorthand must be a single letter/number")
+)
+
+type ErrOptionNotDefined struct {
 	opt OptionGetter
 	arg string
 }
 
-func (e errOptionNotDefined) Error() string {
+func (e ErrOptionNotDefined) Error() string {
 	if e.opt == (*Option)(nil) {
 		return fmt.Sprintf("%s %v\n", bad("* option provided but not defined:"), e.arg)
 	}
