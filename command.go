@@ -159,6 +159,10 @@ func (c *Command) parseCommands(args []string) error {
 				return cmd.parseCommands(args)
 			}
 
+			if cmd.helpRequested(args) || cmd.versionRequested(args) {
+				return nil
+			}
+
 			// Subcommand
 			err := c.runners[arg].Run()
 			if errors.Is(err, PrintHelp) {
