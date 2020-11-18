@@ -1,7 +1,7 @@
 Test CLI
 
 USAGE:
-    test [FLAGS] command [ARGUMENTS...]
+    test [FLAGS] [command] [ARGUMENTS...]
 
 SUBCOMMANDS:
     cachecache    Does something cache like

@@ -1,0 +1,17 @@
+Runs a server for the test command (not really)
+
+USAGE:
+    test server [FLAGS] [command] [ARGUMENTS...]
+
+SUBCOMMANDS:
+    start    Starts a server of some sort
+
+FLAGS:
+    -h, --help
+	    show help
+
+    -V, --version
+	    print the version
+
+Use "test server [command] --help" for more information about a command.
+

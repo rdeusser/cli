@@ -7,8 +7,14 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/hashicorp/go-multierror"
+)
+
+var (
+	mu     sync.Mutex
+	output io.Writer
 )
 
 type Runner interface {
@@ -20,7 +26,7 @@ func Run(runner Runner) error {
 	cmd := runner.Init()
 
 	if cmd.commands == nil {
-		cmd.commands = make(map[string]*Command)
+		cmd.commands = make([]*Command, 0, 0)
 	}
 
 	if cmd.runners == nil {
@@ -34,10 +40,19 @@ func Run(runner Runner) error {
 	cmd.runners[cmd.Name] = runner
 
 	if err := cmd.parseCommands(os.Args[1:]); err != nil {
+		if errors.Is(err, PrintHelp) {
+			return nil
+		}
 		return err
 	}
 
 	return nil
+}
+
+func SetOutput(out io.Writer) {
+	mu.Lock()
+	defer mu.Unlock()
+	output = out
 }
 
 type Command struct {
@@ -57,13 +72,13 @@ type Command struct {
 	Flags []Flag
 
 	// flags is the full set of flags passed to the command.
-	flags map[string]*Option
+	flags []Option
 
 	// args is the full set of arguments passed to the command.
 	// args map[string]*Option
 
 	// commands is a list of commands.
-	commands map[string]*Command
+	commands []*Command
 
 	// runners is a list of commands that satisfies the Runner interface.
 	runners map[string]Runner
@@ -71,14 +86,14 @@ type Command struct {
 	// parent is the parent command for this command.
 	parent *Command
 
-	// output specifies where to write the output.
-	output io.Writer // nil means stdout
-
 	// flagUsage is the combined usage of all flags for the command.
 	flagUsage string
 
 	// commandUsage is the combined usage of all commands for the command.
 	commandUsage string
+
+	// fullName is the combined names of the root command and it's subcommands, if applicable.
+	fullName string
 }
 
 func (c *Command) HasAvailableFlags() bool {
@@ -102,19 +117,20 @@ func (c *Command) FlagHelp() string {
 }
 
 func (c *Command) Output() io.Writer {
-	if c.output == nil {
-		return os.Stdout
-	}
-	return c.output
+	return output
 }
 
-func (c *Command) SetOutput(output io.Writer) {
-	c.output = output
+// FullName returns the full name of the command (e.g. test server start).
+func (c *Command) FullName() string {
+	if c.fullName == "" {
+		return c.Name
+	}
+	return c.fullName
 }
 
 func (c *Command) AddCommands(runners ...Runner) {
 	if c.commands == nil {
-		c.commands = make(map[string]*Command)
+		c.commands = make([]*Command, 0, 0)
 	}
 
 	if c.runners == nil {
@@ -123,31 +139,52 @@ func (c *Command) AddCommands(runners ...Runner) {
 
 	for _, runner := range runners {
 		cmd := runner.Init()
-		c.commands[cmd.Name] = &cmd
-		c.commands[cmd.Name].parent = c
+		c.commands = append(c.commands, &cmd)
 		c.runners[cmd.Name] = runner
+
+		if cmd, ok := c.lookupCommand(cmd.Name); ok {
+			cmd.parent = c
+		}
 	}
 }
 
+// PrintHelp prints the command's help.
 func (c *Command) PrintHelp() {
-	if err := renderTemplate(c.Output(), UsageTemplate, c); err != nil {
+	if err := renderTemplate(output, UsageTemplate, c); err != nil {
 		panic(err)
 	}
 }
 
+// PrintVersion prints the version of the command.
 func (c *Command) PrintVersion() {
-	_, _ = fmt.Fprintln(c.Output(), c.Version)
+	_, _ = fmt.Fprintln(output, c.Version)
 }
 
 func (c *Command) parseCommands(args []string) error {
 	if len(c.commands) > 0 {
 		c.sortCommands()
-		c.setOutput()
+	}
+
+	if c.HasParent() {
+		c.fullName = strings.Join([]string{c.parent.Name, c.Name}, " ")
 	}
 
 	for _, arg := range args {
-		if cmd, ok := c.commands[arg]; ok {
+		if cmd, ok := c.lookupCommand(arg); ok {
+			if len(cmd.commands) > 0 {
+				return cmd.parseCommands(args)
+			}
+
+			cmd.fullName = strings.Join([]string{c.fullName, cmd.Name}, " ")
+
 			if err := cmd.parseFlags(args); err != nil {
+				if errors.Is(err, PrintHelp) {
+					if _, ok := c.lookupCommand(arg); ok {
+						cmd.PrintHelp()
+					}
+					return PrintHelp
+				}
+
 				return err
 			}
 
@@ -155,21 +192,18 @@ func (c *Command) parseCommands(args []string) error {
 				cmd.Version = cmd.parent.Version
 			}
 
-			if len(cmd.commands) > 0 {
-				return cmd.parseCommands(args)
-			}
-
 			if cmd.helpRequested(args) || cmd.versionRequested(args) {
-				return nil
+				cmd.PrintHelp()
+				return PrintHelp
 			}
 
 			// Subcommand
-			err := c.runners[arg].Run()
-			if errors.Is(err, PrintHelp) {
-				c.commands[arg].PrintHelp()
-				return nil
-			}
-			if err != nil {
+			if err := c.runners[arg].Run(); err != nil {
+				if errors.Is(err, PrintHelp) {
+					cmd.PrintHelp()
+					return PrintHelp
+				}
+
 				return err
 			}
 
@@ -182,16 +216,17 @@ func (c *Command) parseCommands(args []string) error {
 	}
 
 	if c.helpRequested(args) || c.versionRequested(args) {
-		return nil
+		c.PrintHelp()
+		return PrintHelp
 	}
 
 	// Root command
-	err := c.runners[c.Name].Run()
-	if errors.Is(err, PrintHelp) {
-		c.PrintHelp()
-		return nil
-	}
-	if err != nil {
+	if err := c.runners[c.Name].Run(); err != nil {
+		if errors.Is(err, PrintHelp) {
+			c.PrintHelp()
+			return PrintHelp
+		}
+
 		return err
 	}
 
@@ -235,20 +270,9 @@ func (c *Command) parseFlags(args []string) error {
 
 		// This flag is not present in the commands list of flags
 		// therefore it is invalid.
-		err := ErrOptionNotDefined{opt: c.flags[flag], arg: arg}
-		fmt.Println(err.Error())
-		c.PrintHelp()
-		os.Exit(0)
-	}
-
-	if c.helpRequested(args) {
-		c.PrintHelp()
-		return nil
-	}
-
-	if c.versionRequested(args) {
-		c.PrintVersion()
-		return nil
+		err := ErrOptionNotDefined{arg: arg}
+		fmt.Fprintln(output, err.Error())
+		return PrintHelp
 	}
 
 	if err := c.checkRequiredFlags(); err != nil {
@@ -259,8 +283,8 @@ func (c *Command) parseFlags(args []string) error {
 }
 
 func (c *Command) parseUsage() {
-	for name, flag := range c.flags {
-		name := good(fmt.Sprintf("--%s", name))
+	for _, flag := range c.flags {
+		name := good(fmt.Sprintf("--%s", flag.Name))
 		shorthand := good(fmt.Sprintf("-%s", flag.Shorthand))
 		usage := flag.Desc
 
@@ -273,8 +297,8 @@ func (c *Command) parseUsage() {
 
 	maxLen := findMaxLength(c.commands)
 
-	for name, sub := range c.commands {
-		c.commandUsage += fmt.Sprintf("    %s%s\n", rpad(good(name), computePadding(maxLen, name)), sub.Desc)
+	for _, cmd := range c.commands {
+		c.commandUsage += fmt.Sprintf("    %s%s\n", rpad(good(cmd.Name), computePadding(maxLen, cmd.Name)), cmd.Desc)
 	}
 }
 
@@ -284,10 +308,11 @@ func (c *Command) addFlags() error {
 	}
 
 	if c.flags == nil {
-		c.flags = make(map[string]*Option)
+		c.flags = make([]Option, 0, 0)
 	}
 
-	c.Flags = append(c.Flags, []Flag{HelpFlag, VersionFlag}...)
+	c.addFlag(HelpFlag)
+	c.addFlag(VersionFlag)
 
 	for _, flag := range c.Flags {
 		if err := c.addFlag(flag); err != nil {
@@ -304,7 +329,7 @@ func (c *Command) addFlag(flag Flag) error {
 		return err
 	}
 
-	c.flags[opt.Name] = &opt
+	c.flags = append(c.flags, opt)
 	return nil
 }
 
@@ -312,7 +337,7 @@ func (c *Command) checkRequiredFlags() error {
 	result := &multierror.Error{}
 
 	for name, flag := range c.flags {
-		if !flag.hasBeenSet && flag.Required {
+		if !flag.HasBeenSet() && flag.Required {
 			_ = multierror.Append(result, fmt.Errorf(bad("%s flag must be provided", name)))
 		}
 	}
@@ -321,49 +346,20 @@ func (c *Command) checkRequiredFlags() error {
 }
 
 func (c *Command) sortCommands() {
-	commands := make(map[string]*Command, len(c.commands))
-	keys := make([]string, 0, len(commands))
-
-	for cmd := range c.commands {
-		keys = append(keys, cmd)
-	}
-
-	sort.Strings(keys)
-
-	for _, k := range keys {
-		commands[k] = c.commands[k]
-	}
-
-	c.commands = commands
+	sort.Sort(SortCommandsByName(c.commands))
 }
 
 func (c *Command) sortFlags() {
-	flags := make(map[string]*Option, len(c.flags))
-	keys := make([]string, 0, len(flags))
-
-	for flag := range c.flags {
-		keys = append(keys, flag)
-	}
-
-	sort.Strings(keys)
-
-	for _, k := range keys {
-		flags[k] = c.flags[k]
-	}
-
-	c.flags = flags
+	sort.Sort(SortOptionsByName(c.flags))
 }
 
-func (c *Command) setOutput() {
-	for _, sub := range c.commands {
-		if c.output != nil {
-			sub.output = c.output
-		}
-
-		if len(sub.commands) > 0 {
-			sub.setOutput()
+func (c *Command) lookupCommand(name string) (*Command, bool) {
+	for _, cmd := range c.commands {
+		if cmd.Name == name {
+			return cmd, true
 		}
 	}
+	return nil, false
 }
 
 func (c *Command) helpRequested(args []string) bool {
@@ -400,3 +396,9 @@ func (c *Command) isFlag(arg string) bool {
 	}
 	return false
 }
+
+type SortCommandsByName []*Command
+
+func (n SortCommandsByName) Len() int           { return len(n) }
+func (n SortCommandsByName) Swap(i, j int)      { n[i], n[j] = n[j], n[i] }
+func (n SortCommandsByName) Less(i, j int) bool { return n[i].Name < n[j].Name }

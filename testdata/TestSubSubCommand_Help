@@ -1,7 +1,7 @@
 Starts a server of some sort
 
 USAGE:
-    start [FLAGS] [ARGUMENTS...]
+    test server start [FLAGS] [ARGUMENTS...]
 
 FLAGS:
     -h, --help
@@ -10,5 +10,5 @@ FLAGS:
     -V, --version
 	    print the version
 
-Use "start --help" for more information about a command.
+Use "test server start --help" for more information about a command.
 

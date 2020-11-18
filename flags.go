@@ -40,7 +40,7 @@ type BoolFlag struct {
 	EnvVar    string
 	Required  bool
 
-	hasBeenSet bool
+	hasBeenSet *bool
 }
 
 func (f BoolFlag) GetType() OptionType {
@@ -62,7 +62,8 @@ func (f BoolFlag) GetOption() (Option, error) {
 		Default:   strconv.FormatBool(f.Default),
 		Required:  f.Required,
 
-		optType: Bool,
+		optType:    Bool,
+		hasBeenSet: f.hasBeenSet,
 	}, nil
 }
 
@@ -77,7 +78,7 @@ func (f BoolFlag) value(into *bool) (flag.Value, error) {
 
 	if !f.Default {
 		f.Value = f.Default
-		f.hasBeenSet = true
+		f.hasBeenSet = boolPtr(true)
 	}
 
 	envVar := strings.TrimSpace(f.EnvVar)
@@ -88,7 +89,7 @@ func (f BoolFlag) value(into *bool) (flag.Value, error) {
 		}
 
 		f.Value = b
-		f.hasBeenSet = true
+		f.hasBeenSet = boolPtr(true)
 	}
 
 	return values.NewBool(into, f.Value), nil
@@ -397,4 +398,8 @@ func (f StringsFlag) value(into *[]string) (flag.Value, error) {
 	}
 
 	return values.NewStrings(into, f.Value), nil
+}
+
+func boolPtr(b bool) *bool {
+	return &b
 }
