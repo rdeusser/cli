@@ -23,6 +23,10 @@ type Runner interface {
 }
 
 func Run(runner Runner) error {
+	if output == nil {
+		SetOutput(os.Stdout)
+	}
+
 	cmd := runner.Init()
 
 	if cmd.commands == nil {
