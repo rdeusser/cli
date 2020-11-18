@@ -18,8 +18,10 @@ func trimRightSpace(s string) string {
 
 // renderTemplate executes the given template text on data, writing the result to w.
 func renderTemplate(w io.Writer, text string, data interface{}) error {
-	t := template.New("usage").Funcs(templateFuncs)
-	template.Must(t.Parse(text))
+	t, err := template.New("usage").Funcs(templateFuncs).Parse(text)
+	if err != nil {
+		return err
+	}
 	return t.ExecuteTemplate(w, "usage", data)
 }
 

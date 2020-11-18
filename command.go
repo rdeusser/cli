@@ -155,7 +155,8 @@ func (c *Command) AddCommands(runners ...Runner) {
 // PrintHelp prints the command's help.
 func (c *Command) PrintHelp() {
 	if err := renderTemplate(output, UsageTemplate, c); err != nil {
-		panic(err)
+		fmt.Printf("%v\n", err)
+		os.Exit(1)
 	}
 }
 
