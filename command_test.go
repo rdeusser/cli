@@ -12,9 +12,6 @@ import (
 
 var testdata = cupaloy.New(
 	cupaloy.SnapshotSubdirectory("testdata"),
-	cupaloy.ShouldUpdate(func() bool {
-		return true
-	}),
 )
 
 type rootCommand struct{}
