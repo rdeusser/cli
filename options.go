@@ -37,7 +37,7 @@ type Option struct {
 	Required  bool
 
 	optType    OptionType
-	hasBeenSet bool
+	hasBeenSet *bool
 }
 
 func (o Option) GetType() OptionType {
@@ -47,6 +47,19 @@ func (o Option) GetType() OptionType {
 func (o Option) GetOption() (Option, error) {
 	return o, nil
 }
+
+func (o Option) HasBeenSet() bool {
+	if o.hasBeenSet == nil {
+		return false
+	}
+	return *o.hasBeenSet
+}
+
+type SortOptionsByName []Option
+
+func (n SortOptionsByName) Len() int           { return len(n) }
+func (n SortOptionsByName) Swap(i, j int)      { n[i], n[j] = n[j], n[i] }
+func (n SortOptionsByName) Less(i, j int) bool { return n[i].Name < n[j].Name }
 
 // BoolOpt represents a bool flag or argument.
 type BoolOpt interface {

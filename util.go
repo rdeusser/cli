@@ -21,15 +21,15 @@ func computePadding(maxLen int, s string) int {
 }
 
 // findMaxLength sorts a map of commands by their length and returns the length of the longest command name.
-func findMaxLength(commands map[string]*Command) int {
+func findMaxLength(commands []*Command) int {
 	if len(commands) == 0 {
 		return 0
 	}
 
 	list := make([]int, 0, len(commands))
 
-	for name := range commands {
-		list = append(list, len(name))
+	for _, cmd := range commands {
+		list = append(list, len(cmd.Name))
 	}
 
 	swapped := true

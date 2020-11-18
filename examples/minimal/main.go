@@ -1,11 +1,15 @@
 package main
 
 import (
+	"log"
+
 	"github.com/rdeusser/cli"
 	"github.com/rdeusser/cli/examples/minimal/app"
 )
 
-func main() {
+type Minimal struct{}
+
+func (Minimal) Init() cli.Command {
 	cmd := cli.Command{
 		Name: "minimal",
 		Desc: "Minimal example",
@@ -15,7 +19,15 @@ func main() {
 		&app.CreateCommand{},
 	)
 
-	if err := cmd.Run(); err != nil {
-		panic(err)
+	return cmd
+}
+
+func (Minimal) Run() error {
+	return nil
+}
+
+func main() {
+	if err := cli.Run(&Minimal{}); err != nil {
+		log.Fatal(err)
 	}
 }

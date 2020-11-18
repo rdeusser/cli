@@ -8,8 +8,8 @@ import (
 )
 
 var templateFuncs = template.FuncMap{
-	"trim":    trimRightSpace,
-	"warning": warning,
+	"trim":       trimRightSpace,
+	"titleColor": warning,
 }
 
 func trimRightSpace(s string) string {
@@ -25,20 +25,20 @@ func renderTemplate(w io.Writer, text string, data interface{}) error {
 
 var UsageTemplate = `{{ .Desc }}
 
-{{ "USAGE:" | warning}}
-    {{ .Name }} {{ if .HasAvailableFlags }}[FLAGS]{{ end }}{{ if .HasAvailableCommands}} command{{ end }} [ARGUMENTS...]
+{{ "USAGE:" | titleColor }}
+    {{ .FullName }} {{ if .HasAvailableFlags }}[FLAGS]{{ end }}{{ if .HasAvailableCommands}} [command]{{ end }} [ARGUMENTS...]
 
 {{- if .HasAvailableCommands }}
 
-{{ "SUBCOMMANDS:" | warning }}
+{{ "SUBCOMMANDS:" | titleColor }}
 {{ .CommandHelp | trim }}
 {{- end }}
 
 {{- if .HasAvailableFlags }}
 
-{{ "FLAGS:" | warning }}
+{{ "FLAGS:" | titleColor }}
 {{ .FlagHelp | trim }}
 {{- end }}
 
-Use "{{ .Name }} {{ if .HasAvailableCommands }}[command] {{ end }}--help" for more information about a command.
+Use "{{ .FullName }} {{ if .HasAvailableCommands }}[command] {{ end }}--help" for more information about a command.
 `

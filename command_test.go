@@ -12,52 +12,15 @@ import (
 
 var testdata = cupaloy.New(
 	cupaloy.SnapshotSubdirectory("testdata"),
+	cupaloy.ShouldUpdate(func() bool {
+		return true
+	}),
 )
 
-type serverCommand struct{}
+type rootCommand struct{}
 
-func (c *serverCommand) Init() Command {
-	return Command{
-		Name: "server",
-		Desc: "Runs a server for the test command (not really)",
-	}
-}
-
-func (c *serverCommand) Run() error {
-	fmt.Println("running from server subcommand")
-	return nil
-}
-
-type serverStartCommand struct{}
-
-func (c *serverStartCommand) Init() Command {
-	return Command{
-		Name: "start",
-		Desc: "Starts a server of some sort",
-	}
-}
-
-func (c *serverStartCommand) Run() error {
-	fmt.Println("running from server start subcommand")
-	return nil
-}
-
-type cacheCacheCommand struct{}
-
-func (c *cacheCacheCommand) Init() Command {
-	return Command{
-		Name: "cachecache",
-		Desc: "Does something cache like",
-	}
-}
-
-func (c *cacheCacheCommand) Run() error {
-	fmt.Println("running from cachecache subcommand")
-	return nil
-}
-
-func TestCommand_Help(t *testing.T) {
-	cmd := &Command{
+func (rootCommand) Init() Command {
+	cmd := Command{
 		Name: "test",
 		Desc: "Test CLI",
 	}
@@ -67,8 +30,69 @@ func TestCommand_Help(t *testing.T) {
 		&cacheCacheCommand{},
 	)
 
+	return cmd
+}
+
+func (rootCommand) Run() error {
+	fmt.Println("running from the root command")
+	return nil
+}
+
+type serverCommand struct{}
+
+func (serverCommand) Init() Command {
+	cmd := Command{
+		Name: "server",
+		Desc: "Runs a server for the test command (not really)",
+	}
+
+	cmd.AddCommands(
+		&serverStartCommand{},
+	)
+
+	return cmd
+}
+
+func (serverCommand) Run() error {
+	fmt.Println("running from server subcommand")
+	return nil
+}
+
+type serverStartCommand struct{}
+
+func (serverStartCommand) Init() Command {
+	return Command{
+		Name: "start",
+		Desc: "Starts a server of some sort",
+	}
+}
+
+func (serverStartCommand) Run() error {
+	fmt.Println("running from server start subcommand")
+	return nil
+}
+
+type cacheCacheCommand struct{}
+
+func (cacheCacheCommand) Init() Command {
+	return Command{
+		Name: "cachecache",
+		Desc: "Does something cache like",
+	}
+}
+
+func (cacheCacheCommand) Run() error {
+	fmt.Println("running from cachecache subcommand")
+	return nil
+}
+
+func TestCommand_Help(t *testing.T) {
+	var root rootCommand
+
+	cmd := root.Init()
+
 	var buf bytes.Buffer
-	cmd.SetOutput(&buf)
+	SetOutput(&buf)
 
 	oldArgs := os.Args
 	defer func() {
@@ -77,26 +101,19 @@ func TestCommand_Help(t *testing.T) {
 
 	os.Args = []string{cmd.Name, "--help"}
 
-	err := cmd.Run()
+	err := Run(&rootCommand{})
 	assert.NoError(t, err)
 
-	err = testdata.Snapshot(buf.String())
-	assert.NoError(t, err)
+	testdata.SnapshotT(t, buf.String())
 }
 
 func TestSubCommand_Help(t *testing.T) {
-	cmd := &Command{
-		Name: "test",
-		Desc: "Test CLI",
-	}
+	var root rootCommand
 
-	cmd.AddCommands(
-		&serverCommand{},
-		&cacheCacheCommand{},
-	)
+	cmd := root.Init()
 
 	var buf bytes.Buffer
-	cmd.SetOutput(&buf)
+	SetOutput(&buf)
 
 	oldArgs := os.Args
 	defer func() {
@@ -105,35 +122,29 @@ func TestSubCommand_Help(t *testing.T) {
 
 	os.Args = []string{cmd.Name, "server", "--help"}
 
-	err := cmd.Run()
+	err := Run(&rootCommand{})
 	assert.NoError(t, err)
 
-	err = testdata.Snapshot(buf.String())
-	assert.NoError(t, err)
+	testdata.SnapshotT(t, buf.String())
 }
 
 func TestSubSubCommand_Help(t *testing.T) {
-	var server serverCommand
+	var root rootCommand
 
-	cmd := server.Init()
+	cmd := root.Init()
 
-	cmd.AddCommands(
-		&serverStartCommand{},
-	)
-
-	var buf bytes.Buffer
-	cmd.SetOutput(&buf)
+	buf := &bytes.Buffer{}
+	SetOutput(buf)
 
 	oldArgs := os.Args
+
+	os.Args = []string{cmd.Name, "server", "start", "--help"}
 	defer func() {
 		os.Args = oldArgs
 	}()
 
-	os.Args = []string{cmd.Name, "server", "start", "--help"}
-
-	err := cmd.Run()
+	err := Run(&rootCommand{})
 	assert.NoError(t, err)
 
-	err = testdata.Snapshot(buf.String())
-	assert.NoError(t, err)
+	testdata.SnapshotT(t, buf.String())
 }
