@@ -192,11 +192,6 @@ func (c *Command) parseCommands(name string, args []string) error {
 		return err
 	}
 
-	if c.helpRequested(args) || c.versionRequested(args) {
-		c.PrintHelp()
-		return nil
-	}
-
 	if err := c.runner.Run(args); err != nil {
 		if errors.Is(err, PrintHelp) {
 			c.PrintHelp()
@@ -249,6 +244,15 @@ func (c *Command) parseFlags(args []string) error {
 		err := ErrOptionNotDefined{arg: arg}
 		fmt.Fprintln(output, err.Error())
 		return PrintHelp
+	}
+
+	if c.helpRequested(args) {
+		return PrintHelp
+	}
+
+	if c.versionRequested(args) {
+		fmt.Println(c.Version)
+		os.Exit(0)
 	}
 
 	if err := c.checkRequiredFlags(); err != nil {
