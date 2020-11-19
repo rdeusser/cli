@@ -30,7 +30,7 @@ func Run(runner Runner) error {
 	cmd := runner.Init()
 
 	if cmd.commands == nil {
-		cmd.commands = make([]*Command, 0, 0)
+		cmd.commands = make([]*Command, 0)
 	}
 
 	if cmd.runners == nil {
@@ -134,7 +134,7 @@ func (c *Command) FullName() string {
 
 func (c *Command) AddCommands(runners ...Runner) {
 	if c.commands == nil {
-		c.commands = make([]*Command, 0, 0)
+		c.commands = make([]*Command, 0)
 	}
 
 	if c.runners == nil {
@@ -283,11 +283,16 @@ func (c *Command) addFlags() error {
 	}
 
 	if c.flags == nil {
-		c.flags = make([]Option, 0, 0)
+		c.flags = make([]Option, 0)
 	}
 
-	c.addFlag(HelpFlag)
-	c.addFlag(VersionFlag)
+	if err := c.addFlag(HelpFlag); err != nil {
+		return err
+	}
+
+	if err := c.addFlag(VersionFlag); err != nil {
+		return err
+	}
 
 	for _, flag := range c.Flags {
 		if err := c.addFlag(flag); err != nil {

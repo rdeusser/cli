@@ -17,7 +17,7 @@ type ErrOptionAlreadyDefined struct {
 
 func (e ErrOptionAlreadyDefined) Error() string {
 	if e.opt == (*Option)(nil) {
-		return fmt.Sprintf("%s", bad("option already defined, but is nil"))
+		return bad("option already defined, but is nil")
 	}
 
 	opt, err := e.opt.GetOption()
