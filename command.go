@@ -323,7 +323,15 @@ func (c *Command) checkRequiredFlags() error {
 
 	for _, flag := range c.flags {
 		if !flag.HasBeenSet() && flag.Required {
-			_ = multierror.Append(result, fmt.Errorf(bad("%s flag must be provided", flag.Name)))
+			var err error
+
+			if flag.Shorthand != "" {
+				err = fmt.Errorf(bad("-%s, --%s flag is required", flag.Shorthand, flag.Name))
+			} else {
+				err = fmt.Errorf(bad("--%s flag is required", flag.Name))
+			}
+
+			_ = multierror.Append(result, err)
 		}
 	}
 
