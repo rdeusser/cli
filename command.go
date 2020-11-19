@@ -43,10 +43,7 @@ func Run(runner Runner) error {
 
 	cmd.runners[cmd.Name] = runner
 
-	if err := cmd.parseCommands(os.Args[1:]); err != nil {
-		if errors.Is(err, PrintHelp) {
-			return nil
-		}
+	if err := cmd.parseCommands(cmd.Name, os.Args[1:]); err != nil {
 		return err
 	}
 
@@ -86,6 +83,9 @@ type Command struct {
 
 	// runners is a list of commands that satisfies the Runner interface.
 	runners map[string]Runner
+
+	// runner is the runner for the current command.
+	runner Runner
 
 	// parent is the parent command for this command.
 	parent *Command
@@ -145,18 +145,14 @@ func (c *Command) AddCommands(runners ...Runner) {
 		cmd := runner.Init()
 		c.commands = append(c.commands, &cmd)
 		c.runners[cmd.Name] = runner
-
-		if cmd, ok := c.lookupCommand(cmd.Name); ok {
-			cmd.parent = c
-		}
+		cmd.parent = c
 	}
 }
 
 // PrintHelp prints the command's help.
 func (c *Command) PrintHelp() {
 	if err := renderTemplate(output, UsageTemplate, c); err != nil {
-		fmt.Printf("%v\n", err)
-		os.Exit(1)
+		panic(err)
 	}
 }
 
@@ -165,71 +161,45 @@ func (c *Command) PrintVersion() {
 	_, _ = fmt.Fprintln(output, c.Version)
 }
 
-func (c *Command) parseCommands(args []string) error {
+func (c *Command) parseCommands(name string, args []string) error {
 	if len(c.commands) > 0 {
 		c.sortCommands()
 	}
 
-	if c.HasParent() {
-		c.fullName = strings.Join([]string{c.parent.Name, c.Name}, " ")
-	}
-
 	for _, arg := range args {
 		if cmd, ok := c.lookupCommand(arg); ok {
-			if len(cmd.commands) > 0 {
-				return cmd.parseCommands(args)
-			}
-
-			cmd.fullName = strings.Join([]string{c.fullName, cmd.Name}, " ")
-
-			if err := cmd.parseFlags(args); err != nil {
-				if errors.Is(err, PrintHelp) {
-					if _, ok := c.lookupCommand(arg); ok {
-						cmd.PrintHelp()
-					}
-					return PrintHelp
-				}
-
-				return err
-			}
+			fullName := name + " " + cmd.Name
 
 			if cmd.Version == "" {
 				cmd.Version = cmd.parent.Version
 			}
 
-			if cmd.helpRequested(args) || cmd.versionRequested(args) {
-				cmd.PrintHelp()
-				return PrintHelp
-			}
+			cmd.runner = c.runners[cmd.Name]
 
-			// Subcommand
-			if err := c.runners[arg].Run(); err != nil {
-				if errors.Is(err, PrintHelp) {
-					cmd.PrintHelp()
-					return PrintHelp
-				}
-
-				return err
-			}
-
-			return nil
+			return cmd.parseCommands(fullName, args[1:])
 		}
 	}
 
+	c.fullName = name
+
 	if err := c.parseFlags(args); err != nil {
+		if errors.Is(err, PrintHelp) {
+			c.PrintHelp()
+			return nil
+		}
+
 		return err
 	}
 
 	if c.helpRequested(args) || c.versionRequested(args) {
 		c.PrintHelp()
-		return PrintHelp
+		return nil
 	}
 
-	// Root command
-	if err := c.runners[c.Name].Run(); err != nil {
+	if err := c.runner.Run(); err != nil {
 		if errors.Is(err, PrintHelp) {
 			c.PrintHelp()
-			return PrintHelp
+			return nil
 		}
 
 		return err
