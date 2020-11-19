@@ -19,7 +19,7 @@ var (
 
 type Runner interface {
 	Init() Command
-	Run() error
+	Run([]string) error
 }
 
 func Run(runner Runner) error {
@@ -76,7 +76,7 @@ type Command struct {
 	flags []Option
 
 	// args is the full set of arguments passed to the command.
-	// args map[string]*Option
+	// args []Option
 
 	// commands is a list of commands.
 	commands []*Command
@@ -196,7 +196,7 @@ func (c *Command) parseCommands(name string, args []string) error {
 		return nil
 	}
 
-	if err := c.runner.Run(); err != nil {
+	if err := c.runner.Run(args); err != nil {
 		if errors.Is(err, PrintHelp) {
 			c.PrintHelp()
 			return nil
