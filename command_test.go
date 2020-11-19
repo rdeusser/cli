@@ -30,7 +30,7 @@ func (rootCommand) Init() Command {
 	return cmd
 }
 
-func (rootCommand) Run() error {
+func (rootCommand) Run(args []string) error {
 	fmt.Println("running from the root command")
 	return nil
 }
@@ -50,7 +50,7 @@ func (serverCommand) Init() Command {
 	return cmd
 }
 
-func (serverCommand) Run() error {
+func (serverCommand) Run(args []string) error {
 	fmt.Println("running from server subcommand")
 	return nil
 }
@@ -64,7 +64,7 @@ func (serverStartCommand) Init() Command {
 	}
 }
 
-func (serverStartCommand) Run() error {
+func (serverStartCommand) Run(args []string) error {
 	fmt.Println("running from server start subcommand")
 	return nil
 }
@@ -78,7 +78,7 @@ func (cacheCacheCommand) Init() Command {
 	}
 }
 
-func (cacheCacheCommand) Run() error {
+func (cacheCacheCommand) Run(args []string) error {
 	fmt.Println("running from cachecache subcommand")
 	return nil
 }
