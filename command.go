@@ -42,6 +42,7 @@ func Run(runner Runner) error {
 	}
 
 	cmd.runners[cmd.Name] = runner
+	cmd.runner = runner
 
 	if err := cmd.parseCommands(cmd.Name, os.Args[1:]); err != nil {
 		return err
