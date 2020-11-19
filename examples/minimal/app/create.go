@@ -17,7 +17,7 @@ func (CreateCommand) Init() cli.Command {
 	}
 }
 
-func (CreateCommand) Run() error {
+func (CreateCommand) Run(args []string) error {
 	fmt.Println("running from the create command")
 	return nil
 }
