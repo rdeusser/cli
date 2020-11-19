@@ -24,7 +24,7 @@ func (Minimal) Init() cli.Command {
 	return cmd
 }
 
-func (Minimal) Run() error {
+func (Minimal) Run(args []string) error {
 	return nil
 }
 
