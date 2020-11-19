@@ -317,9 +317,9 @@ func (c *Command) addFlag(flag Flag) error {
 func (c *Command) checkRequiredFlags() error {
 	result := &multierror.Error{}
 
-	for name, flag := range c.flags {
+	for _, flag := range c.flags {
 		if !flag.HasBeenSet() && flag.Required {
-			_ = multierror.Append(result, fmt.Errorf(bad("%s flag must be provided", name)))
+			_ = multierror.Append(result, fmt.Errorf(bad("%s flag must be provided", flag.Name)))
 		}
 	}
 
