@@ -10,6 +10,10 @@ import (
 type BoolValue bool
 
 func NewBool(into *bool, v bool) *BoolValue {
+	if into == nil {
+		into = new(bool)
+	}
+
 	*into = v
 	return (*BoolValue)(into)
 }
@@ -25,12 +29,16 @@ func (v *BoolValue) Set(s string) error {
 }
 
 func (v *BoolValue) String() string {
-	return fmt.Sprintf("%v", *v)
+	return strconv.FormatBool(bool(*v))
 }
 
 type StringValue string
 
 func NewString(into *string, v string) *StringValue {
+	if into == nil {
+		into = new(string)
+	}
+
 	*into = v
 	return (*StringValue)(into)
 }
@@ -41,7 +49,7 @@ func (v *StringValue) Set(s string) error {
 }
 
 func (v *StringValue) String() string {
-	return fmt.Sprintf("%#v", *v)
+	return string(*v)
 }
 
 type IntValue int
@@ -62,7 +70,7 @@ func (v *IntValue) Set(s string) error {
 }
 
 func (v *IntValue) String() string {
-	return fmt.Sprintf("%v", *v)
+	return strconv.Itoa(int(*v))
 }
 
 type Float64Value float64
@@ -83,7 +91,7 @@ func (v *Float64Value) Set(s string) error {
 }
 
 func (v *Float64Value) String() string {
-	return fmt.Sprintf("%v", *v)
+	return strconv.FormatFloat(float64(*v), 'g', -1, 64)
 }
 
 type DurationValue time.Duration
@@ -104,7 +112,7 @@ func (v *DurationValue) Set(s string) error {
 }
 
 func (v *DurationValue) String() string {
-	return fmt.Sprintf("%v", *v)
+	return time.Duration(*v).String()
 }
 
 type StringsValue []string
