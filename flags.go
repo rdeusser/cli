@@ -27,6 +27,7 @@ var (
 )
 
 type Flag interface {
+	flag.Value
 	TypeGetter
 	OptionGetter
 }
@@ -36,63 +37,62 @@ type BoolFlag struct {
 	Shorthand string
 	Desc      string
 	Default   bool
-	Value     bool
+	Value     flag.Value
 	EnvVar    string
 	Required  bool
-
-	hasBeenSet *bool
 }
 
-func (f BoolFlag) GetType() OptionType {
+func (f *BoolFlag) Type() OptionType {
 	return Bool
 }
 
-func (f BoolFlag) GetOption() (Option, error) {
-	value, err := f.value(nil)
-	if err != nil {
-		return Option{}, err
+func (f *BoolFlag) Option() (Option, error) {
+	value := values.NewBool(nil, f.Default)
+
+	if len(f.Shorthand) > 1 {
+		return Option{}, ErrInvalidShorthand
 	}
 
+	envVar := strings.TrimSpace(f.EnvVar)
+	if v, ok := os.LookupEnv(envVar); ok {
+		_, err := strconv.ParseBool(v)
+		if err != nil {
+			return Option{}, errors.Wrapf(err, "parsing %q as a bool value for flag %s", v, f.Name)
+		}
+
+		if err := value.Set(v); err != nil {
+			return Option{}, err
+		}
+	}
+
+	f.Value = value
+
 	return Option{
+		optType: Bool,
+
 		Name:      f.Name,
 		Shorthand: f.Shorthand,
 		Desc:      f.Desc,
 		EnvVar:    f.EnvVar,
 		Value:     value,
-		Default:   strconv.FormatBool(f.Default),
+		Default:   value.String(),
 		Required:  f.Required,
-
-		optType:    Bool,
-		hasBeenSet: f.hasBeenSet,
 	}, nil
 }
 
-func (f BoolFlag) value(into *bool) (flag.Value, error) {
-	if into == nil {
-		into = new(bool)
-	}
+func (f *BoolFlag) String() string {
+	return f.Value.String()
+}
 
-	if len(f.Shorthand) > 1 {
-		return nil, ErrInvalidShorthand
-	}
+func (f *BoolFlag) Set(s string) error {
+	return f.Value.Set(s)
+}
 
-	if !f.Default {
-		f.Value = f.Default
-		f.hasBeenSet = boolPtr(true)
-	}
-
-	envVar := strings.TrimSpace(f.EnvVar)
-	if v, ok := os.LookupEnv(envVar); ok {
-		b, err := strconv.ParseBool(v)
-		if err != nil {
-			return nil, errors.Wrapf(err, "parsing %q as a bool value for flag %s", v, f.Name)
-		}
-
-		f.Value = b
-		f.hasBeenSet = boolPtr(true)
-	}
-
-	return values.NewBool(into, f.Value), nil
+func (f *BoolFlag) Get() bool {
+	// By this time, we've already validated the flag so we don't need to do
+	// so again.
+	b, _ := strconv.ParseBool(f.Value.String())
+	return b
 }
 
 type StringFlag struct {
@@ -100,57 +100,54 @@ type StringFlag struct {
 	Shorthand string
 	Desc      string
 	Default   string
-	Value     string
+	Value     flag.Value
 	EnvVar    string
 	Required  bool
-
-	hasBeenSet bool
 }
 
-func (f StringFlag) GetType() OptionType {
+func (f *StringFlag) Type() OptionType {
 	return String
 }
 
-func (f StringFlag) GetOption() (Option, error) {
-	value, err := f.value(nil)
-	if err != nil {
-		return Option{}, err
+func (f *StringFlag) Option() (Option, error) {
+	value := values.NewString(nil, f.Default)
+
+	if len(f.Shorthand) > 1 {
+		return Option{}, ErrInvalidShorthand
 	}
 
+	envVar := strings.TrimSpace(f.EnvVar)
+	if v, ok := os.LookupEnv(envVar); ok {
+		if err := value.Set(v); err != nil {
+			return Option{}, err
+		}
+	}
+
+	f.Value = value
+
 	return Option{
+		optType: String,
+
 		Name:      f.Name,
 		Shorthand: f.Shorthand,
 		Desc:      f.Desc,
 		EnvVar:    f.EnvVar,
 		Value:     value,
-		Default:   f.Default,
+		Default:   value.String(),
 		Required:  f.Required,
-
-		optType: String,
 	}, nil
 }
 
-func (f StringFlag) value(into *string) (flag.Value, error) {
-	if into == nil {
-		into = new(string)
-	}
+func (f *StringFlag) String() string {
+	return f.Value.String()
+}
 
-	if len(f.Shorthand) > 1 {
-		return nil, ErrInvalidShorthand
-	}
+func (f *StringFlag) Set(s string) error {
+	return f.Value.Set(s)
+}
 
-	if f.Default != "" {
-		f.Value = f.Default
-		f.hasBeenSet = true
-	}
-
-	envVar := strings.TrimSpace(f.EnvVar)
-	if v, ok := os.LookupEnv(envVar); ok {
-		f.Value = v
-		f.hasBeenSet = true
-	}
-
-	return values.NewString(into, f.Value), nil
+func (f *StringFlag) Get() string {
+	return f.Value.String()
 }
 
 type IntFlag struct {
@@ -158,62 +155,58 @@ type IntFlag struct {
 	Shorthand string
 	Desc      string
 	Default   int
-	Value     int
+	Value     flag.Value
 	EnvVar    string
 	Required  bool
-
-	hasBeenSet bool
 }
 
-func (f IntFlag) GetType() OptionType {
+func (f *IntFlag) Type() OptionType {
 	return Int
 }
 
-func (f IntFlag) GetOption() (Option, error) {
-	value, err := f.value(nil)
-	if err != nil {
-		return Option{}, err
+func (f *IntFlag) Option() (Option, error) {
+	value := values.NewInt(nil, f.Default)
+
+	envVar := strings.TrimSpace(f.EnvVar)
+	if v, ok := os.LookupEnv(envVar); ok {
+		_, err := strconv.ParseInt(v, 0, 64)
+		if err != nil {
+			return Option{}, errors.Wrapf(err, "parsing %q as an int value for flag %s", v, f.Name)
+		}
+
+		if err := value.Set(v); err != nil {
+			return Option{}, err
+		}
 	}
 
+	f.Value = value
+
 	return Option{
+		optType: Int,
+
 		Name:      f.Name,
 		Shorthand: f.Shorthand,
 		Desc:      f.Desc,
 		EnvVar:    f.EnvVar,
 		Value:     value,
-		Default:   strconv.FormatInt(int64(f.Default), 0),
+		Default:   value.String(),
 		Required:  f.Required,
-
-		optType: Int,
 	}, nil
 }
 
-func (f IntFlag) value(into *int) (flag.Value, error) {
-	if into == nil {
-		into = new(int)
-	}
+func (f *IntFlag) String() string {
+	return f.Value.String()
+}
 
-	if len(f.Shorthand) > 1 {
-		return nil, ErrInvalidShorthand
-	}
+func (f *IntFlag) Set(s string) error {
+	return f.Value.Set(s)
+}
 
-	if f.Default != 0 {
-		f.Value = f.Default
-		f.hasBeenSet = true
-	}
-
-	envVar := strings.TrimSpace(f.EnvVar)
-	if v, ok := os.LookupEnv(envVar); ok {
-		i, err := strconv.ParseInt(v, 0, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "parsing %q as an int value for flag %s", v, f.Name)
-		}
-
-		f.Value = int(i)
-		f.hasBeenSet = true
-	}
-
-	return values.NewInt(into, f.Value), nil
+func (f *IntFlag) Get() int {
+	// By this time, we've already validated the flag so we don't need to do
+	// so again.
+	i, _ := strconv.ParseInt(f.Value.String(), 10, 64)
+	return int(i)
 }
 
 type Float64Flag struct {
@@ -221,62 +214,62 @@ type Float64Flag struct {
 	Shorthand string
 	Desc      string
 	Default   float64
-	Value     float64
+	Value     flag.Value
 	EnvVar    string
 	Required  bool
-
-	hasBeenSet bool
 }
 
-func (f Float64Flag) GetType() OptionType {
+func (f *Float64Flag) Type() OptionType {
 	return Float64
 }
 
-func (f Float64Flag) GetOption() (Option, error) {
-	value, err := f.value(nil)
-	if err != nil {
-		return Option{}, err
+func (f *Float64Flag) Option() (Option, error) {
+	value := values.NewFloat64(nil, f.Default)
+
+	if len(f.Shorthand) > 1 {
+		return Option{}, ErrInvalidShorthand
 	}
 
+	envVar := strings.TrimSpace(f.EnvVar)
+	if v, ok := os.LookupEnv(envVar); ok {
+		_, err := strconv.ParseFloat(v, 64)
+		if err != nil {
+			return Option{}, errors.Wrapf(err, "parsing %q as a float64 value for flag %s", v, f.Name)
+		}
+
+		if err := value.Set(v); err != nil {
+			return Option{}, err
+		}
+	}
+
+	f.Value = value
+
 	return Option{
+		optType: Float64,
+
 		Name:      f.Name,
 		Shorthand: f.Shorthand,
 		Desc:      f.Desc,
 		EnvVar:    f.EnvVar,
 		Value:     value,
-		Default:   strconv.FormatFloat(f.Default, 0, 0, 64),
+		Default:   value.String(),
 		Required:  f.Required,
-
-		optType: Float64,
 	}, nil
 }
 
-func (f Float64Flag) value(into *float64) (flag.Value, error) {
-	if into == nil {
-		into = new(float64)
-	}
+func (f *Float64Flag) String() string {
+	return f.Value.String()
+}
 
-	if len(f.Shorthand) > 1 {
-		return nil, ErrInvalidShorthand
-	}
+func (f *Float64Flag) Set(s string) error {
+	return f.Value.Set(s)
+}
 
-	if f.Default != 0.0 {
-		f.Value = f.Default
-		f.hasBeenSet = true
-	}
-
-	envVar := strings.TrimSpace(f.EnvVar)
-	if v, ok := os.LookupEnv(envVar); ok {
-		f64, err := strconv.ParseFloat(v, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "parsing %q as a float64 value for flag %s", v, f.Name)
-		}
-
-		f.Value = f64
-		f.hasBeenSet = true
-	}
-
-	return values.NewFloat64(into, f.Value), nil
+func (f *Float64Flag) Get() float64 {
+	// By this time, we've already validated the flag so we don't need to do
+	// so again.
+	f64, _ := strconv.ParseFloat(f.Value.String(), 0)
+	return f64
 }
 
 type DurationFlag struct {
@@ -284,24 +277,39 @@ type DurationFlag struct {
 	Shorthand string
 	Desc      string
 	Default   time.Duration
-	Value     time.Duration
+	Value     flag.Value
 	EnvVar    string
 	Required  bool
-
-	hasBeenSet bool
 }
 
-func (f DurationFlag) GetType() OptionType {
+func (f *DurationFlag) Type() OptionType {
 	return Duration
 }
 
-func (f DurationFlag) GetOption() (Option, error) {
-	value, err := f.value(nil)
-	if err != nil {
-		return Option{}, err
+func (f *DurationFlag) Option() (Option, error) {
+	value := values.NewDuration(nil, f.Default)
+
+	if len(f.Shorthand) > 1 {
+		return Option{}, ErrInvalidShorthand
 	}
 
+	envVar := strings.TrimSpace(f.EnvVar)
+	if v, ok := os.LookupEnv(envVar); ok {
+		_, err := time.ParseDuration(v)
+		if err != nil {
+			return Option{}, errors.Wrapf(err, "parsing %q as a time.Duration value for flag %s", v, f.Name)
+		}
+
+		if err := value.Set(v); err != nil {
+			return Option{}, err
+		}
+	}
+
+	f.Value = value
+
 	return Option{
+		optType: Duration,
+
 		Name:      f.Name,
 		Shorthand: f.Shorthand,
 		Desc:      f.Desc,
@@ -309,37 +317,22 @@ func (f DurationFlag) GetOption() (Option, error) {
 		Value:     value,
 		Default:   f.Default.String(),
 		Required:  f.Required,
-
-		optType: Duration,
 	}, nil
 }
 
-func (f DurationFlag) value(into *time.Duration) (flag.Value, error) {
-	if into == nil {
-		into = new(time.Duration)
-	}
+func (f *DurationFlag) String() string {
+	return f.Value.String()
+}
 
-	if len(f.Shorthand) > 1 {
-		return nil, ErrInvalidShorthand
-	}
+func (f *DurationFlag) Set(s string) error {
+	return f.Value.Set(s)
+}
 
-	if f.Default != time.Duration(0) {
-		f.Value = f.Default
-		f.hasBeenSet = true
-	}
-
-	envVar := strings.TrimSpace(f.EnvVar)
-	if v, ok := os.LookupEnv(envVar); ok {
-		d, err := time.ParseDuration(v)
-		if err != nil {
-			return nil, errors.Wrapf(err, "parsing %q as a time.Duration value for flag %s", v, f.Name)
-		}
-
-		f.Value = d
-		f.hasBeenSet = true
-	}
-
-	return values.NewDuration(into, f.Value), nil
+func (f *DurationFlag) Get() time.Duration {
+	// By this time, we've already validated the flag so we don't need to do
+	// so again.
+	d, _ := time.ParseDuration(f.Value.String())
+	return d
 }
 
 type StringsFlag struct {
@@ -347,59 +340,52 @@ type StringsFlag struct {
 	Shorthand string
 	Desc      string
 	Default   []string
-	Value     []string
+	Value     flag.Value
 	EnvVar    string
 	Required  bool
-
-	hasBeenSet bool
 }
 
-func (f StringsFlag) GetType() OptionType {
+func (f *StringsFlag) Type() OptionType {
 	return Strings
 }
 
-func (f StringsFlag) GetOption() (Option, error) {
-	value, err := f.value(nil)
-	if err != nil {
-		return Option{}, err
+func (f *StringsFlag) Option() (Option, error) {
+	value := values.NewStrings(nil, f.Default)
+
+	if len(f.Shorthand) > 1 {
+		return Option{}, ErrInvalidShorthand
 	}
 
+	envVar := strings.TrimSpace(f.EnvVar)
+	if v, ok := os.LookupEnv(envVar); ok {
+		if err := value.Set(v); err != nil {
+			return Option{}, err
+		}
+	}
+
+	f.Value = value
+
 	return Option{
+		optType: Strings,
+
 		Name:      f.Name,
 		Shorthand: f.Shorthand,
 		Desc:      f.Desc,
 		EnvVar:    f.EnvVar,
 		Value:     value,
-		Default:   strings.Join(f.Default, " "),
+		Default:   value.String(),
 		Required:  f.Required,
-
-		optType: Strings,
 	}, nil
 }
 
-func (f StringsFlag) value(into *[]string) (flag.Value, error) {
-	if into == nil {
-		into = new([]string)
-	}
-
-	if len(f.Shorthand) > 1 {
-		return nil, ErrInvalidShorthand
-	}
-
-	if f.Default != nil {
-		f.Value = f.Default
-		f.hasBeenSet = true
-	}
-
-	envVar := strings.TrimSpace(f.EnvVar)
-	if v, ok := os.LookupEnv(envVar); ok {
-		f.Value = strings.Split(v, " ")
-		f.hasBeenSet = true
-	}
-
-	return values.NewStrings(into, f.Value), nil
+func (f *StringsFlag) String() string {
+	return f.Value.String()
 }
 
-func boolPtr(b bool) *bool {
-	return &b
+func (f *StringsFlag) Set(s string) error {
+	return f.Value.Set(s)
+}
+
+func (f *StringsFlag) Get() []string {
+	return strings.Split(f.Value.String(), " ")
 }
