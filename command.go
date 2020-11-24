@@ -22,7 +22,7 @@ type Runner interface {
 	Run([]string) error
 }
 
-func Run(runner Runner) error {
+func Run(runner Runner) (Command, error) {
 	if output == nil {
 		SetOutput(os.Stdout)
 	}
@@ -41,14 +41,18 @@ func Run(runner Runner) error {
 		cmd.Version = "dev"
 	}
 
-	cmd.runners[cmd.Name] = runner
 	cmd.runner = runner
+	cmd.runners[cmd.Name] = runner
 
 	if err := cmd.parseCommands(cmd.Name, os.Args[1:]); err != nil {
-		return err
+		if errors.Is(err, PrintHelp) {
+			return cmd, nil
+		}
+
+		return cmd, err
 	}
 
-	return nil
+	return cmd, nil
 }
 
 func SetOutput(out io.Writer) {
@@ -158,13 +162,11 @@ func (c *Command) PrintHelp() {
 	if err := renderTemplate(output, UsageTemplate, c); err != nil {
 		panic(err)
 	}
-	os.Exit(0)
 }
 
 // PrintVersion prints the version of the command.
 func (c *Command) PrintVersion() {
 	_, _ = fmt.Fprintln(output, c.Version)
-	os.Exit(0)
 }
 
 func (c *Command) parseCommands(name string, args []string) error {
@@ -174,7 +176,11 @@ func (c *Command) parseCommands(name string, args []string) error {
 
 	for _, arg := range args {
 		if cmd, ok := c.lookupCommand(arg); ok {
-			fullName := name + " " + cmd.Name
+			fullName := fmt.Sprintf("%s %s", name, cmd.Name)
+
+			if err := cmd.addParentFlags(c); err != nil {
+				return err
+			}
 
 			if cmd.Version == "" {
 				cmd.Version = cmd.parent.Version
@@ -191,6 +197,7 @@ func (c *Command) parseCommands(name string, args []string) error {
 	if err := c.parseFlags(args); err != nil {
 		if errors.Is(err, PrintHelp) {
 			c.PrintHelp()
+			return PrintHelp
 		}
 
 		return err
@@ -199,6 +206,7 @@ func (c *Command) parseCommands(name string, args []string) error {
 	if err := c.runner.Run(args); err != nil {
 		if errors.Is(err, PrintHelp) {
 			c.PrintHelp()
+			return PrintHelp
 		}
 
 		return err
@@ -214,6 +222,8 @@ func (c *Command) parseFlags(args []string) error {
 
 	c.sortFlags()
 	c.parseUsage()
+
+	flagArgs := args
 
 	for _, arg := range args {
 		// If the current argument isn't a flag, then skip it.
@@ -240,28 +250,39 @@ func (c *Command) parseFlags(args []string) error {
 		}
 
 		if option.Shorthand == HelpFlag.Shorthand || option.Name == HelpFlag.Name {
-			c.PrintHelp()
+			return PrintHelp
 		}
 
 		if option.Shorthand == VersionFlag.Shorthand || option.Name == VersionFlag.Name {
 			c.PrintVersion()
+			return nil
 		}
 
-		if fv, ok := flag.(*BoolFlag); ok {
-			if err := fv.Set("true"); err != nil {
+		switch x := flag.(type) {
+		case *BoolFlag:
+			if err := x.Set("true"); err != nil {
 				return err
 			}
-		}
+		case *StringSliceFlag:
+			x.Clear()
 
-		flagArgs := args[1:]
+			for _, v := range flagArgs[1:] {
+				if err := x.Set(v); err != nil {
+					return err
+				}
+			}
+		default:
+			flagArgs = flagArgs[1:]
+
+			if len(flagArgs) > 0 {
+				if err := x.Set(flagArgs[0]); err != nil {
+					return err
+				}
+			}
+		}
 
 		if len(flagArgs) > 0 {
-			if err := flag.Set(flagArgs[0]); err != nil {
-				return err
-			}
-			continue
-		} else {
-			return fmt.Errorf("%s requires an argument", arg)
+			flagArgs = flagArgs[1:]
 		}
 	}
 
@@ -292,6 +313,22 @@ func (c *Command) parseUsage() {
 	}
 }
 
+func (c *Command) addParentFlags(parent *Command) error {
+	seen := make(map[Flag]struct{})
+
+	for _, flag := range c.Flags {
+		seen[flag] = struct{}{}
+	}
+
+	for _, flag := range parent.Flags {
+		if _, ok := seen[flag]; !ok {
+			c.Flags = append(c.Flags, flag)
+		}
+	}
+
+	return nil
+}
+
 func (c *Command) addFlags() error {
 	if c.Flags == nil {
 		c.Flags = make([]Flag, 0)
@@ -305,12 +342,18 @@ func (c *Command) addFlags() error {
 		c.formal = make([]Option, 0)
 	}
 
-	if err := c.addFlag(&HelpFlag); err != nil {
-		return err
+	seen := make(map[Flag]struct{})
+
+	for _, flag := range c.Flags {
+		seen[flag] = struct{}{}
 	}
 
-	if err := c.addFlag(&VersionFlag); err != nil {
-		return err
+	if _, ok := seen[&HelpFlag]; !ok {
+		c.Flags = append(c.Flags, &HelpFlag)
+	}
+
+	if _, ok := seen[&VersionFlag]; !ok {
+		c.Flags = append(c.Flags, &VersionFlag)
 	}
 
 	for _, flag := range c.Flags {

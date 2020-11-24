@@ -55,6 +55,10 @@ func (v *StringValue) String() string {
 type IntValue int
 
 func NewInt(into *int, v int) *IntValue {
+	if into == nil {
+		into = new(int)
+	}
+
 	*into = v
 	return (*IntValue)(into)
 }
@@ -76,6 +80,10 @@ func (v *IntValue) String() string {
 type Float64Value float64
 
 func NewFloat64(into *float64, v float64) *Float64Value {
+	if into == nil {
+		into = new(float64)
+	}
+
 	*into = v
 	return (*Float64Value)(into)
 }
@@ -97,6 +105,10 @@ func (v *Float64Value) String() string {
 type DurationValue time.Duration
 
 func NewDuration(into *time.Duration, v time.Duration) *DurationValue {
+	if into == nil {
+		into = new(time.Duration)
+	}
+
 	*into = v
 	return (*DurationValue)(into)
 }
@@ -115,19 +127,23 @@ func (v *DurationValue) String() string {
 	return time.Duration(*v).String()
 }
 
-type StringsValue []string
+type StringSliceValue []string
 
-func NewStrings(into *[]string, v []string) *StringsValue {
+func NewStringSlice(into *[]string, v []string) *StringSliceValue {
+	if into == nil {
+		into = new([]string)
+	}
+
 	*into = v
-	return (*StringsValue)(into)
+	return (*StringSliceValue)(into)
 }
 
-func (v *StringsValue) Set(s string) error {
+func (v *StringSliceValue) Set(s string) error {
 	*v = append(*v, s)
 	return nil
 }
 
-func (v *StringsValue) String() string {
+func (v *StringSliceValue) String() string {
 	sb := new(strings.Builder)
 
 	sb.WriteString("[")
@@ -137,6 +153,7 @@ func (v *StringsValue) String() string {
 		}
 		sb.WriteString(fmt.Sprintf("%#v", s))
 	}
+	sb.WriteString("]")
 
 	return sb.String()
 }

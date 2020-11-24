@@ -4,8 +4,7 @@ USAGE:
     test [FLAGS] [command] [ARGUMENTS...]
 
 SUBCOMMANDS:
-    cachecache    Does something cache like
-    server        Runs a server for the test command (not really)
+    server    Runs a server for the test command (not really)
 
 FLAGS:
     -h, --help
@@ -15,4 +14,3 @@ FLAGS:
 	    print the version
 
 Use "test [command] --help" for more information about a command.
-

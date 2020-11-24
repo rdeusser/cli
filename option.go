@@ -16,13 +16,13 @@ type OptionGetter interface {
 type OptionType int
 
 const (
-	Invalid  OptionType = iota // invalid
-	Bool                       // bool
-	String                     // string
-	Int                        // int
-	Float64                    // float64
-	Duration                   // time.Duration
-	Strings                    // []string
+	Invalid     OptionType = iota // invalid
+	Bool                          // bool
+	String                        // string
+	Int                           // int
+	Float64                       // float64
+	Duration                      // time.Duration
+	StringSlice                   // []string
 )
 
 // Option represents a flag or argument.

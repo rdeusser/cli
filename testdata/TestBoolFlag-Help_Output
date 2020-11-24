@@ -1,0 +1,16 @@
+test setting a bool flag
+
+USAGE:
+    test [FLAGS] [ARGUMENTS...]
+
+FLAGS:
+    -h, --help
+	    show help
+
+    -t, --test
+	    run tests
+
+    -V, --version
+	    print the version
+
+Use "test --help" for more information about a command.
