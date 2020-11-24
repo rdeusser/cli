@@ -14,7 +14,7 @@ func _() {
 	_ = x[Int-3]
 	_ = x[Float64-4]
 	_ = x[Duration-5]
-	_ = x[Strings-6]
+	_ = x[StringSlice-6]
 }
 
 const _OptionType_name = "invalidboolstringintfloat64time.Duration[]string"

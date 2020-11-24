@@ -12,11 +12,12 @@ import (
 )
 
 type Float64Flag struct {
+	value flag.Value
+
 	Name      string
 	Shorthand string
 	Desc      string
 	Default   float64
-	Value     flag.Value
 	EnvVar    string
 	Required  bool
 }
@@ -44,7 +45,7 @@ func (f *Float64Flag) Option() (Option, error) {
 		}
 	}
 
-	f.Value = value
+	f.value = value
 
 	return Option{
 		optType: Float64,
@@ -53,23 +54,23 @@ func (f *Float64Flag) Option() (Option, error) {
 		Shorthand: f.Shorthand,
 		Desc:      f.Desc,
 		EnvVar:    f.EnvVar,
-		Value:     value,
-		Default:   value.String(),
+		Value:     f.value,
+		Default:   f.value.String(),
 		Required:  f.Required,
 	}, nil
 }
 
 func (f *Float64Flag) String() string {
-	return f.Value.String()
+	return f.value.String()
 }
 
 func (f *Float64Flag) Set(s string) error {
-	return f.Value.Set(s)
+	return f.value.Set(s)
 }
 
 func (f *Float64Flag) Get() float64 {
 	// By this time, we've already validated the flag so we don't need to do
 	// so again.
-	f64, _ := strconv.ParseFloat(f.Value.String(), 0)
+	f64, _ := strconv.ParseFloat(f.value.String(), 0)
 	return f64
 }

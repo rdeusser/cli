@@ -12,11 +12,12 @@ import (
 )
 
 type DurationFlag struct {
+	value flag.Value
+
 	Name      string
 	Shorthand string
 	Desc      string
 	Default   time.Duration
-	Value     flag.Value
 	EnvVar    string
 	Required  bool
 }
@@ -44,7 +45,7 @@ func (f *DurationFlag) Option() (Option, error) {
 		}
 	}
 
-	f.Value = value
+	f.value = value
 
 	return Option{
 		optType: Duration,
@@ -53,23 +54,23 @@ func (f *DurationFlag) Option() (Option, error) {
 		Shorthand: f.Shorthand,
 		Desc:      f.Desc,
 		EnvVar:    f.EnvVar,
-		Value:     value,
-		Default:   f.Default.String(),
+		Value:     f.value,
+		Default:   f.value.String(),
 		Required:  f.Required,
 	}, nil
 }
 
 func (f *DurationFlag) String() string {
-	return f.Value.String()
+	return f.value.String()
 }
 
 func (f *DurationFlag) Set(s string) error {
-	return f.Value.Set(s)
+	return f.value.Set(s)
 }
 
 func (f *DurationFlag) Get() time.Duration {
 	// By this time, we've already validated the flag so we don't need to do
 	// so again.
-	d, _ := time.ParseDuration(f.Value.String())
+	d, _ := time.ParseDuration(f.value.String())
 	return d
 }

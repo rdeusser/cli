@@ -9,21 +9,22 @@ import (
 )
 
 type StringSliceFlag struct {
+	value flag.Value
+
 	Name      string
 	Shorthand string
 	Desc      string
 	Default   []string
-	Value     flag.Value
 	EnvVar    string
 	Required  bool
 }
 
 func (f *StringSliceFlag) Type() OptionType {
-	return Strings
+	return StringSlice
 }
 
 func (f *StringSliceFlag) Option() (Option, error) {
-	value := values.NewStrings(nil, f.Default)
+	value := values.NewStringSlice(nil, f.Default)
 
 	if len(f.Shorthand) > 1 {
 		return Option{}, ErrInvalidShorthand
@@ -36,29 +37,39 @@ func (f *StringSliceFlag) Option() (Option, error) {
 		}
 	}
 
-	f.Value = value
+	f.value = value
 
 	return Option{
-		optType: Strings,
+		optType: StringSlice,
 
 		Name:      f.Name,
 		Shorthand: f.Shorthand,
 		Desc:      f.Desc,
 		EnvVar:    f.EnvVar,
-		Value:     value,
-		Default:   value.String(),
+		Value:     f.value,
+		Default:   f.value.String(),
 		Required:  f.Required,
 	}, nil
 }
 
 func (f *StringSliceFlag) String() string {
-	return f.Value.String()
+	return f.value.String()
 }
 
 func (f *StringSliceFlag) Set(s string) error {
-	return f.Value.Set(s)
+	return f.value.Set(s)
 }
 
 func (f *StringSliceFlag) Get() []string {
-	return strings.Split(f.Value.String(), " ")
+	value := f.value.String()
+	value = strings.ReplaceAll(value, "[", "")
+	value = strings.ReplaceAll(value, "]", "")
+	value = strings.ReplaceAll(value, "\"", "")
+
+	return strings.Split(value, ", ")
+}
+
+func (f *StringSliceFlag) Clear() bool {
+	f.value = values.NewStringSlice(nil, []string{})
+	return len(f.String()) > 0
 }

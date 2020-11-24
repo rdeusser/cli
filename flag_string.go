@@ -9,11 +9,12 @@ import (
 )
 
 type StringFlag struct {
+	value flag.Value
+
 	Name      string
 	Shorthand string
 	Desc      string
 	Default   string
-	Value     flag.Value
 	EnvVar    string
 	Required  bool
 }
@@ -36,7 +37,7 @@ func (f *StringFlag) Option() (Option, error) {
 		}
 	}
 
-	f.Value = value
+	f.value = value
 
 	return Option{
 		optType: String,
@@ -45,20 +46,20 @@ func (f *StringFlag) Option() (Option, error) {
 		Shorthand: f.Shorthand,
 		Desc:      f.Desc,
 		EnvVar:    f.EnvVar,
-		Value:     value,
-		Default:   value.String(),
+		Value:     f.value,
+		Default:   f.value.String(),
 		Required:  f.Required,
 	}, nil
 }
 
 func (f *StringFlag) String() string {
-	return f.Value.String()
+	return f.value.String()
 }
 
 func (f *StringFlag) Set(s string) error {
-	return f.Value.Set(s)
+	return f.value.Set(s)
 }
 
 func (f *StringFlag) Get() string {
-	return f.Value.String()
+	return f.value.String()
 }

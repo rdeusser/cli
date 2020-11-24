@@ -12,11 +12,12 @@ import (
 )
 
 type BoolFlag struct {
+	value flag.Value
+
 	Name      string
 	Shorthand string
 	Desc      string
 	Default   bool
-	Value     flag.Value
 	EnvVar    string
 	Required  bool
 }
@@ -44,7 +45,7 @@ func (f *BoolFlag) Option() (Option, error) {
 		}
 	}
 
-	f.Value = value
+	f.value = value
 
 	return Option{
 		optType: Bool,
@@ -53,23 +54,23 @@ func (f *BoolFlag) Option() (Option, error) {
 		Shorthand: f.Shorthand,
 		Desc:      f.Desc,
 		EnvVar:    f.EnvVar,
-		Value:     value,
-		Default:   value.String(),
+		Value:     f.value,
+		Default:   f.value.String(),
 		Required:  f.Required,
 	}, nil
 }
 
 func (f *BoolFlag) String() string {
-	return f.Value.String()
+	return f.value.String()
 }
 
 func (f *BoolFlag) Set(s string) error {
-	return f.Value.Set(s)
+	return f.value.Set(s)
 }
 
 func (f *BoolFlag) Get() bool {
 	// By this time, we've already validated the flag so we don't need to do
 	// so again.
-	b, _ := strconv.ParseBool(f.Value.String())
+	b, _ := strconv.ParseBool(f.value.String())
 	return b
 }

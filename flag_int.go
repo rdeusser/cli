@@ -12,11 +12,12 @@ import (
 )
 
 type IntFlag struct {
+	value flag.Value
+
 	Name      string
 	Shorthand string
 	Desc      string
 	Default   int
-	Value     flag.Value
 	EnvVar    string
 	Required  bool
 }
@@ -40,7 +41,7 @@ func (f *IntFlag) Option() (Option, error) {
 		}
 	}
 
-	f.Value = value
+	f.value = value
 
 	return Option{
 		optType: Int,
@@ -49,23 +50,23 @@ func (f *IntFlag) Option() (Option, error) {
 		Shorthand: f.Shorthand,
 		Desc:      f.Desc,
 		EnvVar:    f.EnvVar,
-		Value:     value,
-		Default:   value.String(),
+		Value:     f.value,
+		Default:   f.value.String(),
 		Required:  f.Required,
 	}, nil
 }
 
 func (f *IntFlag) String() string {
-	return f.Value.String()
+	return f.value.String()
 }
 
 func (f *IntFlag) Set(s string) error {
-	return f.Value.Set(s)
+	return f.value.Set(s)
 }
 
 func (f *IntFlag) Get() int {
 	// By this time, we've already validated the flag so we don't need to do
 	// so again.
-	i, _ := strconv.ParseInt(f.Value.String(), 10, 64)
+	i, _ := strconv.ParseInt(f.value.String(), 10, 64)
 	return int(i)
 }
