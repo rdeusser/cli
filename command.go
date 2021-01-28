@@ -275,6 +275,9 @@ func (c *Command) parseFlags(args []string) error {
 			flagArgs = flagArgs[1:]
 
 			if len(flagArgs) > 0 {
+				if c.isFlag(flagArgs[0]) {
+					break
+				}
 				if err := x.Set(flagArgs[0]); err != nil {
 					return err
 				}
