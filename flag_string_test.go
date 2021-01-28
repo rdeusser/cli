@@ -63,7 +63,7 @@ func TestStringFlag(t *testing.T) {
 		},
 		{
 			"Set Value After Args",
-			[]string{"hi", "-f", "config.yaml"},
+			[]string{"foo", "bar", "baz", "-f", "config.yaml"},
 			"config.yaml",
 		},
 	}
