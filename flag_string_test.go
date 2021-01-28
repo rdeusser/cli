@@ -5,6 +5,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/hexops/autogold"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -33,35 +34,32 @@ func (stringCommand) Run(args []string) error {
 }
 
 func TestStringFlag(t *testing.T) {
+	NoColor.Store(true) // autogold seems to have problems with color in golden files
+
 	tests := []struct {
 		name     string
 		args     []string
 		expected string
-		snapshot bool
 	}{
 		{
 			"Help Output",
 			[]string{"--help"},
 			"config.yaml",
-			true,
 		},
 		{
 			"Default Value",
 			[]string{""},
 			"config.yaml",
-			false,
 		},
 		{
 			"Set Value Using Shorthand",
 			[]string{"-f", "anotherconfig.yaml"},
 			"anotherconfig.yaml",
-			false,
 		},
 		{
 			"Set Value Using Name",
 			[]string{"--filename", "anotherconfig.yaml"},
 			"anotherconfig.yaml",
-			false,
 		},
 		{
 			"Set Value After Args",
@@ -98,9 +96,7 @@ func TestStringFlag(t *testing.T) {
 			assert.Equal(t, tt.expected, stringFlag.Get())
 			assert.Equal(t, tt.expected, stringFlag.String())
 
-			if tt.snapshot {
-				snapshot(t, buf.Bytes(), nil)
-			}
+			autogold.Equal(t, autogold.Raw(buf.String()))
 		})
 	}
 }

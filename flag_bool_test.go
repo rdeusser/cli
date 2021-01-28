@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/hexops/autogold"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -34,35 +35,32 @@ func (boolCommand) Run(args []string) error {
 }
 
 func TestBoolFlag(t *testing.T) {
+	NoColor.Store(true) // autogold seems to have problems with color in golden files
+
 	tests := []struct {
 		name     string
 		args     []string
 		expected bool
-		snapshot bool
 	}{
 		{
 			"Help Output",
 			[]string{"--help"},
 			false,
-			true,
 		},
 		{
 			"Default Value",
 			[]string{""},
-			false,
 			false,
 		},
 		{
 			"Set Value Using Shorthand",
 			[]string{"-t"},
 			true,
-			false,
 		},
 		{
 			"Set Value Using Name",
 			[]string{"--test"},
 			true,
-			false,
 		},
 	}
 
@@ -94,9 +92,7 @@ func TestBoolFlag(t *testing.T) {
 			assert.Equal(t, tt.expected, boolFlag.Get())
 			assert.Equal(t, strconv.FormatBool(tt.expected), boolFlag.String())
 
-			if tt.snapshot {
-				snapshot(t, buf.Bytes(), nil)
-			}
+			autogold.Equal(t, autogold.Raw(buf.String()))
 		})
 	}
 }
