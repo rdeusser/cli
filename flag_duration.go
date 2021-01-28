@@ -61,6 +61,9 @@ func (f *DurationFlag) Option() (Option, error) {
 }
 
 func (f *DurationFlag) String() string {
+	if f.value == nil {
+		panic("value of duration flag is nil, did you add it to your command?")
+	}
 	return f.value.String()
 }
 
@@ -71,6 +74,6 @@ func (f *DurationFlag) Set(s string) error {
 func (f *DurationFlag) Get() time.Duration {
 	// By this time, we've already validated the flag so we don't need to do
 	// so again.
-	d, _ := time.ParseDuration(f.value.String())
+	d, _ := time.ParseDuration(f.String())
 	return d
 }

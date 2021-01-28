@@ -53,6 +53,9 @@ func (f *StringFlag) Option() (Option, error) {
 }
 
 func (f *StringFlag) String() string {
+	if f.value == nil {
+		panic("value of string flag is nil, did you add it to your command?")
+	}
 	return f.value.String()
 }
 

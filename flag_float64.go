@@ -61,6 +61,9 @@ func (f *Float64Flag) Option() (Option, error) {
 }
 
 func (f *Float64Flag) String() string {
+	if f.value == nil {
+		panic("value of float64 flag is nil, did you add it to your command?")
+	}
 	return f.value.String()
 }
 
@@ -71,6 +74,6 @@ func (f *Float64Flag) Set(s string) error {
 func (f *Float64Flag) Get() float64 {
 	// By this time, we've already validated the flag so we don't need to do
 	// so again.
-	f64, _ := strconv.ParseFloat(f.value.String(), 0)
+	f64, _ := strconv.ParseFloat(f.String(), 0)
 	return f64
 }

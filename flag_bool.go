@@ -61,6 +61,9 @@ func (f *BoolFlag) Option() (Option, error) {
 }
 
 func (f *BoolFlag) String() string {
+	if f.value == nil {
+		panic("value of bool flag is nil, did you add it to your command?")
+	}
 	return f.value.String()
 }
 
@@ -71,6 +74,6 @@ func (f *BoolFlag) Set(s string) error {
 func (f *BoolFlag) Get() bool {
 	// By this time, we've already validated the flag so we don't need to do
 	// so again.
-	b, _ := strconv.ParseBool(f.value.String())
+	b, _ := strconv.ParseBool(f.String())
 	return b
 }

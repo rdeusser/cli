@@ -57,6 +57,9 @@ func (f *IntFlag) Option() (Option, error) {
 }
 
 func (f *IntFlag) String() string {
+	if f.value == nil {
+		panic("value of int flag is nil, did you add it to your command?")
+	}
 	return f.value.String()
 }
 
@@ -67,6 +70,6 @@ func (f *IntFlag) Set(s string) error {
 func (f *IntFlag) Get() int {
 	// By this time, we've already validated the flag so we don't need to do
 	// so again.
-	i, _ := strconv.ParseInt(f.value.String(), 10, 64)
+	i, _ := strconv.ParseInt(f.String(), 10, 64)
 	return int(i)
 }

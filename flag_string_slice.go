@@ -53,6 +53,9 @@ func (f *StringSliceFlag) Option() (Option, error) {
 }
 
 func (f *StringSliceFlag) String() string {
+	if f.value == nil {
+		panic("value of string slice flag is nil, did you add it to your command?")
+	}
 	return f.value.String()
 }
 
@@ -61,7 +64,7 @@ func (f *StringSliceFlag) Set(s string) error {
 }
 
 func (f *StringSliceFlag) Get() []string {
-	value := f.value.String()
+	value := f.String()
 	value = strings.ReplaceAll(value, "[", "")
 	value = strings.ReplaceAll(value, "]", "")
 	value = strings.ReplaceAll(value, "\"", "")
