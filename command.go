@@ -223,9 +223,9 @@ func (c *Command) parseFlags(args []string) error {
 	c.sortFlags()
 	c.parseUsage()
 
-	flagArgs := args
+	var flagArgs []string
 
-	for _, arg := range args {
+	for i, arg := range args {
 		// If the current argument isn't a flag, then skip it.
 		if !c.isFlag(arg) {
 			continue
@@ -258,6 +258,8 @@ func (c *Command) parseFlags(args []string) error {
 			return nil
 		}
 
+		flagArgs = args[i:]
+
 		switch x := flag.(type) {
 		case *BoolFlag:
 			if err := x.Set("true"); err != nil {
@@ -275,9 +277,6 @@ func (c *Command) parseFlags(args []string) error {
 			flagArgs = flagArgs[1:]
 
 			if len(flagArgs) > 0 {
-				if c.isFlag(flagArgs[0]) {
-					break
-				}
 				if err := x.Set(flagArgs[0]); err != nil {
 					return err
 				}
