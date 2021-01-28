@@ -63,6 +63,11 @@ func TestStringFlag(t *testing.T) {
 			"anotherconfig.yaml",
 			false,
 		},
+		{
+			"Set Value After Args",
+			[]string{"hi", "-f", "config.yaml"},
+			"config.yaml",
+		},
 	}
 
 	for _, tt := range tests {
