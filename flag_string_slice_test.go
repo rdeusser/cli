@@ -5,6 +5,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/hexops/autogold"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -33,35 +34,32 @@ func (stringSliceCommand) Run(args []string) error {
 }
 
 func TestStringSliceFlag(t *testing.T) {
+	NoColor.Store(true) // autogold seems to have problems with color in golden files
+
 	tests := []struct {
 		name     string
 		args     []string
 		expected []string
-		snapshot bool
 	}{
 		{
 			"Help Output",
 			[]string{"--help"},
 			[]string{"pkg1", "pkg2"},
-			true,
 		},
 		{
 			"Default Value",
 			[]string{""},
 			[]string{"pkg1", "pkg2"},
-			false,
 		},
 		{
 			"Set Value Using Shorthand",
 			[]string{"-t", "pkg3", "pkg4"},
 			[]string{"pkg3", "pkg4"},
-			false,
 		},
 		{
 			"Set Value Using Name",
 			[]string{"--tests", "pkg3", "pkg4"},
 			[]string{"pkg3", "pkg4"},
-			false,
 		},
 	}
 
@@ -92,9 +90,7 @@ func TestStringSliceFlag(t *testing.T) {
 			assert.Equal(t, StringSlice, stringSliceFlag.Type())
 			assert.Equal(t, tt.expected, stringSliceFlag.Get())
 
-			if tt.snapshot {
-				snapshot(t, buf.Bytes(), nil)
-			}
+			autogold.Equal(t, autogold.Raw(buf.String()))
 		})
 	}
 }

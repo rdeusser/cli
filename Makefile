@@ -60,6 +60,11 @@ test: ## Runs all cli's unit tests.
 	@echo ">> running unit tests"
 	@go test -coverprofile=coverage.out $(shell go list ./...);
 
+.PHONY: update-testdata
+update-testdata: ## Updates all files in testdata directories.
+	@echo ">> updating files in testdata directories"
+	@go run --tags=tools tools/update-testdata/main.go
+
 .PHONY: bump-version
 bump-version: ## Bump the version in the version file. Set SEMVER to [ patch (default) | major | minor ].
 	@./scripts/bump-version.sh $(SEMVER)

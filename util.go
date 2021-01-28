@@ -5,7 +5,10 @@ import (
 	"strings"
 
 	"github.com/fatih/color"
+	"go.uber.org/atomic"
 )
+
+var NoColor = atomic.NewBool(false)
 
 // rpad adds padding to the right side of a string.
 func rpad(s string, count int) string {
@@ -51,6 +54,9 @@ func good(format string, args ...interface{}) string {
 	if format == "" {
 		return ""
 	}
+	if NoColor.Load() {
+		return fmt.Sprintf(format, args...)
+	}
 	return color.GreenString(format, args...)
 }
 
@@ -58,12 +64,18 @@ func warning(format string, args ...interface{}) string {
 	if format == "" {
 		return ""
 	}
+	if NoColor.Load() {
+		return fmt.Sprintf(format, args...)
+	}
 	return color.YellowString(format, args...)
 }
 
 func bad(format string, args ...interface{}) string {
 	if format == "" {
 		return ""
+	}
+	if NoColor.Load() {
+		return fmt.Sprintf(format, args...)
 	}
 	return color.RedString(format, args...)
 }

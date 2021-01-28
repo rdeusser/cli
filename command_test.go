@@ -3,13 +3,10 @@ package cli
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"os"
-	"path/filepath"
-	"strings"
 	"testing"
 
-	"github.com/kr/pretty"
+	"github.com/hexops/autogold"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -69,41 +66,9 @@ func (serverStartCommand) Run(args []string) error {
 	return nil
 }
 
-func snapshot(t *testing.T, output []byte, obj interface{}) {
-	t.Helper()
-
-	testname := strings.ReplaceAll(t.Name(), "/", "-")
-	filename := filepath.Join(testdata, testname)
-	snapshot, err := ioutil.ReadFile(filename)
-	if err != nil {
-		if os.IsNotExist(err) {
-			os.Setenv("UPDATE_SNAPSHOTS", "true")
-			t.Logf("Snapshot %s doesn't exist yet", testname)
-		} else {
-			assert.NoError(t, err)
-		}
-	}
-
-	if _, ok := os.LookupEnv("UPDATE_SNAPSHOTS"); ok {
-		if obj != nil {
-			err := ioutil.WriteFile(filename, []byte(pretty.Sprint(obj)), os.FileMode(0644))
-			assert.NoError(t, err)
-		} else {
-			err := ioutil.WriteFile(filename, output, os.FileMode(0644))
-			assert.NoError(t, err)
-		}
-
-		t.Logf("Updated snapshot for %s", testname)
-	} else {
-		if obj != nil {
-			assert.Equal(t, snapshot, pretty.Sprint(obj))
-		} else {
-			assert.Equal(t, snapshot, output)
-		}
-	}
-}
-
 func TestCommand(t *testing.T) {
+	NoColor.Store(true) // autogold seems to have problems with color in golden files
+
 	tests := []struct {
 		name string
 		args []string
@@ -158,7 +123,7 @@ func TestCommand(t *testing.T) {
 			cmd, err = Run(&rootCommand{})
 			assert.NoError(t, err)
 
-			snapshot(t, buf.Bytes(), nil)
+			autogold.Equal(t, autogold.Raw(buf.String()))
 		})
 	}
 }
