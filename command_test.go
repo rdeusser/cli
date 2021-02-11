@@ -10,8 +10,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const testdata = "testdata"
-
 type rootCommand struct{}
 
 func (rootCommand) Init() Command {

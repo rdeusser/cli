@@ -282,10 +282,6 @@ func (c *Command) parseFlags(args []string) error {
 				}
 			}
 		}
-
-		if len(flagArgs) > 0 {
-			flagArgs = flagArgs[1:]
-		}
 	}
 
 	if err := c.checkRequiredOptions(); err != nil {
@@ -422,15 +418,6 @@ func (c *Command) lookupFlag(arg string) (Flag, bool) {
 		}
 	}
 	return nil, false
-}
-
-func (c *Command) lookupOption(arg string) (Option, bool) {
-	for _, option := range c.formal {
-		if option.Shorthand == arg || option.Name == arg {
-			return option, true
-		}
-	}
-	return Option{}, false
 }
 
 func (c *Command) isFlag(arg string) bool {
