@@ -297,8 +297,8 @@ func (c *Command) parseFlags(args []string) error {
 
 func (c *Command) parseUsage() {
 	for _, flag := range c.formal {
-		name := good(fmt.Sprintf("--%s", flag.Name))
-		shorthand := good(fmt.Sprintf("-%s", flag.Shorthand))
+		name := colorize(ColorYellow, "--%s", flag.Name)
+		shorthand := colorize(ColorYellow, "-%s", flag.Shorthand)
 		usage := flag.Desc
 
 		if flag.Shorthand != "" {
@@ -311,7 +311,7 @@ func (c *Command) parseUsage() {
 	maxLen := findMaxLength(c.commands)
 
 	for _, cmd := range c.commands {
-		c.commandUsage += fmt.Sprintf("    %s%s\n", rpad(good(cmd.Name), computePadding(maxLen, cmd.Name)), cmd.Desc)
+		c.commandUsage += fmt.Sprintf("    %s%s\n", rpad(colorize(ColorYellow, cmd.Name), computePadding(maxLen, cmd.Name)), cmd.Desc)
 	}
 }
 
@@ -386,9 +386,9 @@ func (c *Command) checkRequiredOptions() error {
 			var err error
 
 			if option.Shorthand != "" {
-				err = fmt.Errorf(bad("-%s, --%s is required", option.Shorthand, option.Name))
+				err = fmt.Errorf(colorize(ColorRed, "-%s, --%s is required", option.Shorthand, option.Name))
 			} else {
-				err = fmt.Errorf(bad("--%s is required", option.Name))
+				err = fmt.Errorf(colorize(ColorRed, "--%s is required", option.Name))
 			}
 
 			_ = multierror.Append(result, err)
