@@ -10,7 +10,7 @@ import (
 
 func captureOutput(f func()) string {
 	var buf bytes.Buffer
-	stdout = &buf
+	SetOutput(&buf)
 	f()
 	return buf.String()
 }

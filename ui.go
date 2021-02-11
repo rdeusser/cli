@@ -2,14 +2,10 @@ package cli
 
 import (
 	"fmt"
-	"io"
-	"os"
 
 	"github.com/muesli/termenv"
 	"go.uber.org/atomic"
 )
-
-var stdout io.Writer
 
 var (
 	NoColor = atomic.NewBool(false)
@@ -24,23 +20,23 @@ const (
 )
 
 func Output(format string, args ...interface{}) {
-	fmt.Fprintln(stdout, colorize(nil, format, args...))
+	fmt.Fprintln(output, colorize(nil, format, args...))
 }
 
 func Info(format string, args ...interface{}) {
-	fmt.Fprintln(stdout, colorize(ColorGreen, "[INFO][%s]:", projectName), fmt.Sprintf(format, args...))
+	fmt.Fprintln(output, colorize(ColorGreen, "[INFO][%s]:", projectName), fmt.Sprintf(format, args...))
 }
 
 func Warn(format string, args ...interface{}) {
-	fmt.Fprintln(stdout, colorize(ColorYellow, "[WARN][%s]:", projectName), fmt.Sprintf(format, args...))
+	fmt.Fprintln(output, colorize(ColorYellow, "[WARN][%s]:", projectName), fmt.Sprintf(format, args...))
 }
 
 func Error(format string, args ...interface{}) {
-	fmt.Fprintln(stdout, colorize(ColorRed, "[ERROR][%s]:", projectName), fmt.Sprintf(format, args...))
+	fmt.Fprintln(output, colorize(ColorRed, "[ERROR][%s]:", projectName), fmt.Sprintf(format, args...))
 }
 
 func Fatal(format string, args ...interface{}) {
-	fmt.Fprintln(stdout, colorize(ColorRed, "[FATAL][%s]:", projectName), fmt.Sprintf(format, args...))
+	fmt.Fprintln(output, colorize(ColorRed, "[FATAL][%s]:", projectName), fmt.Sprintf(format, args...))
 }
 
 func Panic(format string, args ...interface{}) {
@@ -50,10 +46,6 @@ func Panic(format string, args ...interface{}) {
 }
 
 func colorize(color termenv.Color, format string, args ...interface{}) string {
-	if stdout == nil {
-		stdout = os.Stdout
-	}
-
 	s := fmt.Sprintf(format, args...)
 
 	if NoColor.Load() {
