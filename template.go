@@ -9,7 +9,11 @@ import (
 
 var templateFuncs = template.FuncMap{
 	"trim":       trimRightSpace,
-	"titleColor": warning,
+	"titleColor": titleColor,
+}
+
+func titleColor(s string) string {
+	return colorize(ColorYellow, s)
 }
 
 func trimRightSpace(s string) string {

@@ -17,15 +17,15 @@ type ErrOptionAlreadyDefined struct {
 
 func (e ErrOptionAlreadyDefined) Error() string {
 	if e.opt == nil {
-		return bad("option already defined, but is nil")
+		return colorize(ColorRed, "option already defined, but is nil")
 	}
 
 	opt, err := e.opt.Option()
 	if err != nil {
-		return errors.Wrapf(err, "%s %v", bad("option (type %s) already defined:", opt.Type()), opt.Name).Error()
+		return errors.Wrapf(err, "%s %v", colorize(ColorRed, "option (type %s) already defined:", opt.Type()), opt.Name).Error()
 	}
 
-	return fmt.Sprintf("%s %v", bad("option (type %s) already defined:", opt.Type()), opt.Name)
+	return fmt.Sprintf("%s %v", colorize(ColorRed, "option (type %s) already defined:", opt.Type()), opt.Name)
 }
 
 type ErrOptionNotDefined struct {
@@ -33,5 +33,5 @@ type ErrOptionNotDefined struct {
 }
 
 func (e ErrOptionNotDefined) Error() string {
-	return fmt.Sprintf("* %s %v\n", bad("option provided but not defined:"), e.arg)
+	return fmt.Sprintf("* %s %v\n", colorize(ColorRed, "option provided but not defined:"), e.arg)
 }
