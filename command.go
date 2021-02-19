@@ -295,8 +295,8 @@ func (c *Command) parseFlags(args []string) error {
 
 func (c *Command) parseUsage() {
 	for _, flag := range c.formal {
-		name := colorize(ColorYellow, "--%s", flag.Name)
-		shorthand := colorize(ColorYellow, "-%s", flag.Shorthand)
+		name := colorize(ColorGreen, "--%s", flag.Name)
+		shorthand := colorize(ColorGreen, "-%s", flag.Shorthand)
 		usage := flag.Desc
 
 		if flag.Shorthand != "" {
@@ -309,7 +309,7 @@ func (c *Command) parseUsage() {
 	maxLen := findMaxLength(c.commands)
 
 	for _, cmd := range c.commands {
-		c.commandUsage += fmt.Sprintf("    %s%s\n", rpad(colorize(ColorYellow, cmd.Name), computePadding(maxLen, cmd.Name)), cmd.Desc)
+		c.commandUsage += fmt.Sprintf("    %s%s\n", rpad(colorize(ColorGreen, cmd.Name), computePadding(maxLen, cmd.Name)), cmd.Desc)
 	}
 }
 
