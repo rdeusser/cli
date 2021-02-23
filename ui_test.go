@@ -16,7 +16,7 @@ func captureOutput(f func()) string {
 }
 
 func TestOutput(t *testing.T) {
-	projectName.Store("cli")
+	projectName.Store("foo")
 
 	t.Run("Output", func(t *testing.T) {
 		output := captureOutput(func() {
@@ -33,7 +33,7 @@ func TestOutput(t *testing.T) {
 			Info("hello world")
 		})
 
-		expected := fmt.Sprintf("%s%s\n", colorize(ColorGreen, "[INFO][cli]: "), "hello world")
+		expected := fmt.Sprintf("%s%s\n", colorize(ColorGreen, "[INFO][foo]: "), "hello world")
 
 		assert.Equal(t, expected, output)
 	})
@@ -43,7 +43,7 @@ func TestOutput(t *testing.T) {
 			Warn("hello world")
 		})
 
-		expected := fmt.Sprintf("%s%s\n", colorize(ColorGreen, "[WARN][cli]: "), "hello world")
+		expected := fmt.Sprintf("%s%s\n", colorize(ColorGreen, "[WARN][foo]: "), "hello world")
 
 		assert.Equal(t, expected, output)
 	})
@@ -53,8 +53,21 @@ func TestOutput(t *testing.T) {
 			Error("hello world")
 		})
 
-		expected := fmt.Sprintf("%s%s\n", colorize(ColorGreen, "[ERROR][cli]: "), "hello world")
+		expected := fmt.Sprintf("%s%s\n", colorize(ColorGreen, "[ERROR][foo]: "), "hello world")
 
 		assert.Equal(t, expected, output)
 	})
+
+	t.Run("SetProjectName", func(t *testing.T) {
+		SetProjectName("bar")
+
+		output := captureOutput(func() {
+			Info("hello world")
+		})
+
+		expected := fmt.Sprintf("%s%s\n", colorize(ColorGreen, "[INFO][bar]: "), "hello world")
+
+		assert.Equal(t, expected, output)
+	})
+
 }
