@@ -19,6 +19,10 @@ const (
 	ColorGreen  = termenv.ANSIGreen
 )
 
+func SetProjectName(name string) {
+	projectName.Store(name)
+}
+
 func Output(format string, args ...interface{}) {
 	fmt.Fprintln(output, colorize(nil, format, args...))
 }
