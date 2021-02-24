@@ -19,6 +19,10 @@ const (
 	ColorGreen  = termenv.ANSIGreen
 )
 
+func ProjectName() string {
+	return projectName.Load()
+}
+
 func SetProjectName(name string) {
 	projectName.Store(name)
 }
