@@ -7,16 +7,29 @@ import (
 	"go.uber.org/atomic"
 )
 
-var (
-	NoColor = atomic.NewBool(false)
+//go:generate gen-enum -type=level
+type OutputLevel int32
 
-	projectName = atomic.NewString("")
+const (
+	DebugLevel OutputLevel = iota
+	InfoLevel
+	WarnLevel
+	ErrorLevel
+	FatalLevel
+	PanicLevel
 )
 
 const (
 	ColorRed    = termenv.ANSIRed
 	ColorYellow = termenv.ANSIYellow
 	ColorGreen  = termenv.ANSIGreen
+)
+
+var NoColor = atomic.NewBool(false)
+
+var (
+	projectName = atomic.NewString("")
+	outputLevel = atomic.NewInt32(int32(InfoLevel))
 )
 
 func ProjectName() string {
@@ -27,8 +40,20 @@ func SetProjectName(name string) {
 	projectName.Store(name)
 }
 
+func OuptutLevel() string {
+	return ""
+}
+
+func SetOutputLevel(level OutputLevel) {
+	outputLevel.Store(int32(level))
+}
+
 func Output(format string, args ...interface{}) {
 	fmt.Fprintln(output, colorize(nil, format, args...))
+}
+
+func Debug(format string, args ...interface{}) {
+	fmt.Fprintln(output, colorize(ColorYellow, "[DEBUG][%s]:", projectName), fmt.Sprintf(format, args...))
 }
 
 func Info(format string, args ...interface{}) {
