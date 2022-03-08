@@ -7,16 +7,16 @@ import (
 	"go.uber.org/atomic"
 )
 
-//go:generate gen-enum -type=level
-type OutputLevel int32
+//go:generate gen-enum -type=OutputLevel
+type OutputLevel int
 
 const (
-	DebugLevel OutputLevel = iota
-	InfoLevel
-	WarnLevel
-	ErrorLevel
-	FatalLevel
-	PanicLevel
+	DebugLevel OutputLevel = iota // name=DEBUG
+	InfoLevel                     // name=INFO
+	WarnLevel                     // name=WARN
+	ErrorLevel                    // name=ERROR
+	FatalLevel                    // name=FATAL
+	PanicLevel                    // name=PANIC
 )
 
 const (
@@ -28,24 +28,28 @@ const (
 var NoColor = atomic.NewBool(false)
 
 var (
-	projectName = atomic.NewString("")
-	outputLevel = atomic.NewInt32(int32(InfoLevel))
+	projectName = ""
+	outputLevel = InfoLevel
 )
 
 func ProjectName() string {
-	return projectName.Load()
+	return projectName
 }
 
 func SetProjectName(name string) {
-	projectName.Store(name)
+	mu.Lock()
+	defer mu.Unlock()
+	projectName = name
 }
 
-func OuptutLevel() string {
-	return ""
+func OuptutLevel() OutputLevel {
+	return outputLevel
 }
 
 func SetOutputLevel(level OutputLevel) {
-	outputLevel.Store(int32(level))
+	mu.Lock()
+	defer mu.Unlock()
+	outputLevel = level
 }
 
 func Output(format string, args ...interface{}) {
@@ -53,38 +57,38 @@ func Output(format string, args ...interface{}) {
 }
 
 func Debug(format string, args ...interface{}) {
-	if outputLevel.Load() >= int32(DebugLevel) {
-		fmt.Fprintln(output, colorize(ColorYellow, "[DEBUG][%s]:", projectName), fmt.Sprintf(format, args...))
+	if outputLevel <= DebugLevel {
+		fmt.Fprintln(output, colorize(ColorYellow, "[%s][%s]:", DebugLevel, projectName), fmt.Sprintf(format, args...))
 	}
 }
 
 func Info(format string, args ...interface{}) {
-	if outputLevel.Load() >= int32(InfoLevel) {
-		fmt.Fprintln(output, colorize(ColorGreen, "[INFO][%s]:", projectName), fmt.Sprintf(format, args...))
+	if outputLevel <= InfoLevel {
+		fmt.Fprintln(output, colorize(ColorGreen, "[%s][%s]:", InfoLevel, projectName), fmt.Sprintf(format, args...))
 	}
 }
 
 func Warn(format string, args ...interface{}) {
-	if outputLevel.Load() >= int32(WarnLevel) {
-		fmt.Fprintln(output, colorize(ColorYellow, "[WARN][%s]:", projectName), fmt.Sprintf(format, args...))
+	if outputLevel <= WarnLevel {
+		fmt.Fprintln(output, colorize(ColorYellow, "[%s][%s]:", WarnLevel, projectName), fmt.Sprintf(format, args...))
 	}
 }
 
 func Error(format string, args ...interface{}) {
-	if outputLevel.Load() >= int32(ErrorLevel) {
-		fmt.Fprintln(output, colorize(ColorRed, "[ERROR][%s]:", projectName), fmt.Sprintf(format, args...))
+	if outputLevel <= ErrorLevel {
+		fmt.Fprintln(output, colorize(ColorRed, "[%s][%s]:", ErrorLevel, projectName), fmt.Sprintf(format, args...))
 	}
 }
 
 func Fatal(format string, args ...interface{}) {
-	if outputLevel.Load() >= int32(FatalLevel) {
-		fmt.Fprintln(output, colorize(ColorRed, "[FATAL][%s]:", projectName), fmt.Sprintf(format, args...))
+	if outputLevel <= FatalLevel {
+		fmt.Fprintln(output, colorize(ColorRed, "[%s][%s]:", FatalLevel, projectName), fmt.Sprintf(format, args...))
 	}
 }
 
 func Panic(format string, args ...interface{}) {
-	if outputLevel.Load() >= int32(PanicLevel) {
-		s := fmt.Sprint(colorize(ColorRed, "[PANIC][%s]:", projectName), fmt.Sprintf(format, args...))
+	if outputLevel <= PanicLevel {
+		s := fmt.Sprint(colorize(ColorRed, "[%s][%s]:", PanicLevel, projectName), fmt.Sprintf(format, args...))
 		panic(s)
 	}
 }
