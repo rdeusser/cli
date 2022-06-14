@@ -34,7 +34,7 @@ func (stringCommand) Run(args []string) error {
 }
 
 func TestStringFlag(t *testing.T) {
-	NoColor.Store(true) // autogold seems to have problems with color in golden files
+	NoColor = true // autogold seems to have problems with color in golden files
 
 	tests := []struct {
 		name     string
@@ -78,7 +78,7 @@ func TestStringFlag(t *testing.T) {
 			cmd := runner.Init()
 
 			var buf bytes.Buffer
-			SetOutput(&buf)
+			Output = &buf
 
 			oldArgs := os.Args
 			defer func() {

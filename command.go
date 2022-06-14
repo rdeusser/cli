@@ -3,19 +3,15 @@ package cli
 import (
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"sort"
 	"strings"
-	"sync"
 
 	"github.com/hashicorp/go-multierror"
+	"github.com/mattn/go-colorable"
 )
 
-var (
-	mu     sync.Mutex
-	output io.Writer
-)
+var Output = colorable.NewColorableStdout()
 
 type Runner interface {
 	Init() Command
@@ -23,13 +19,9 @@ type Runner interface {
 }
 
 func Run(runner Runner) (Command, error) {
-	if output == nil {
-		SetOutput(os.Stdout)
-	}
-
 	cmd := runner.Init()
 
-	SetProjectName(cmd.Name)
+	ProjectName = cmd.Name
 
 	if cmd.commands == nil {
 		cmd.commands = make([]*Command, 0)
@@ -55,12 +47,6 @@ func Run(runner Runner) (Command, error) {
 	}
 
 	return cmd, nil
-}
-
-func SetOutput(out io.Writer) {
-	mu.Lock()
-	defer mu.Unlock()
-	output = out
 }
 
 type Command struct {
@@ -130,10 +116,6 @@ func (c *Command) FlagHelp() string {
 	return c.flagUsage
 }
 
-func (c *Command) Output() io.Writer {
-	return output
-}
-
 // FullName returns the full name of the command (e.g. test server start).
 func (c *Command) FullName() string {
 	if c.fullName == "" {
@@ -161,14 +143,14 @@ func (c *Command) AddCommands(runners ...Runner) {
 
 // PrintHelp prints the command's help.
 func (c *Command) PrintHelp() {
-	if err := renderTemplate(output, UsageTemplate, c); err != nil {
+	if err := renderTemplate(Output, UsageTemplate, c); err != nil {
 		panic(err)
 	}
 }
 
 // PrintVersion prints the version of the command.
 func (c *Command) PrintVersion() {
-	_, _ = fmt.Fprintln(output, c.Version)
+	_, _ = fmt.Fprintln(Output, c.Version)
 }
 
 func (c *Command) parseCommands(name string, args []string) error {
@@ -242,7 +224,7 @@ func (c *Command) parseFlags(args []string) error {
 			// This flag is not present in the commands list of flags
 			// therefore it is invalid.
 			err := ErrOptionNotDefined{arg: arg}
-			fmt.Fprintln(output, err.Error())
+			fmt.Fprintln(Output, err.Error())
 			return PrintHelp
 		}
 

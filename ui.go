@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/muesli/termenv"
-	"go.uber.org/atomic"
 )
 
 //go:generate gen-enum -type=OutputLevel
@@ -25,74 +24,47 @@ const (
 	ColorGreen  = termenv.ANSIGreen
 )
 
-var NoColor = atomic.NewBool(false)
-
 var (
-	projectName = ""
-	outputLevel = InfoLevel
+	ProjectName = ""
+	NoColor     = false
+	EnableDebug = false
 )
 
-func ProjectName() string {
-	return projectName
-}
-
-func SetProjectName(name string) {
-	projectName = name
-}
-
-func OuptutLevel() OutputLevel {
-	return outputLevel
-}
-
-func SetOutputLevel(level OutputLevel) {
-	outputLevel = level
-}
-
-func Output(format string, args ...interface{}) {
-	fmt.Fprintln(output, colorize(nil, format, args...))
+func Print(format string, args ...interface{}) {
+	fmt.Fprintln(Output, colorize(nil, format, args...))
 }
 
 func Debug(format string, args ...interface{}) {
-	if outputLevel <= DebugLevel {
-		fmt.Fprintln(output, colorize(ColorYellow, "[%s][%s]:", DebugLevel, projectName), fmt.Sprintf(format, args...))
+	if EnableDebug {
+		fmt.Fprintln(Output, colorize(ColorYellow, "[%s][%s]:", DebugLevel, ProjectName), fmt.Sprintf(format, args...))
 	}
 }
 
 func Info(format string, args ...interface{}) {
-	if outputLevel <= InfoLevel {
-		fmt.Fprintln(output, colorize(ColorGreen, "[%s][%s]:", InfoLevel, projectName), fmt.Sprintf(format, args...))
-	}
+	fmt.Fprintln(Output, colorize(ColorGreen, "[%s][%s]:", InfoLevel, ProjectName), fmt.Sprintf(format, args...))
 }
 
 func Warn(format string, args ...interface{}) {
-	if outputLevel <= WarnLevel {
-		fmt.Fprintln(output, colorize(ColorYellow, "[%s][%s]:", WarnLevel, projectName), fmt.Sprintf(format, args...))
-	}
+	fmt.Fprintln(Output, colorize(ColorYellow, "[%s][%s]:", WarnLevel, ProjectName), fmt.Sprintf(format, args...))
 }
 
 func Error(format string, args ...interface{}) {
-	if outputLevel <= ErrorLevel {
-		fmt.Fprintln(output, colorize(ColorRed, "[%s][%s]:", ErrorLevel, projectName), fmt.Sprintf(format, args...))
-	}
+	fmt.Fprintln(Output, colorize(ColorRed, "[%s][%s]:", ErrorLevel, ProjectName), fmt.Sprintf(format, args...))
 }
 
 func Fatal(format string, args ...interface{}) {
-	if outputLevel <= FatalLevel {
-		fmt.Fprintln(output, colorize(ColorRed, "[%s][%s]:", FatalLevel, projectName), fmt.Sprintf(format, args...))
-	}
+	fmt.Fprintln(Output, colorize(ColorRed, "[%s][%s]:", FatalLevel, ProjectName), fmt.Sprintf(format, args...))
 }
 
 func Panic(format string, args ...interface{}) {
-	if outputLevel <= PanicLevel {
-		s := fmt.Sprint(colorize(ColorRed, "[%s][%s]:", PanicLevel, projectName), fmt.Sprintf(format, args...))
-		panic(s)
-	}
+	s := fmt.Sprint(colorize(ColorRed, "[%s][%s]:", PanicLevel, ProjectName), fmt.Sprintf(format, args...))
+	panic(s)
 }
 
 func colorize(color termenv.Color, format string, args ...interface{}) string {
 	s := fmt.Sprintf(format, args...)
 
-	if NoColor.Load() {
+	if NoColor {
 		return s
 	}
 

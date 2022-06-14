@@ -10,17 +10,17 @@ import (
 
 func captureOutput(f func()) string {
 	var buf bytes.Buffer
-	SetOutput(&buf)
+	Output = &buf
 	f()
 	return buf.String()
 }
 
 func TestOutput(t *testing.T) {
-	SetProjectName("foo")
+	ProjectName = "foo"
 
-	t.Run("Output", func(t *testing.T) {
+	t.Run("Print", func(t *testing.T) {
 		output := captureOutput(func() {
-			Output("hello world")
+			Print("hello world")
 		})
 
 		expected := "hello world\n"
@@ -58,8 +58,8 @@ func TestOutput(t *testing.T) {
 		assert.Equal(t, expected, output)
 	})
 
-	t.Run("SetProjectName", func(t *testing.T) {
-		SetProjectName("bar")
+	t.Run("Set Project Name", func(t *testing.T) {
+		ProjectName = "bar"
 
 		output := captureOutput(func() {
 			Info("hello world")
