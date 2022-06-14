@@ -29,9 +29,7 @@ func Run(runner Runner) (Command, error) {
 
 	cmd := runner.Init()
 
-	mu.Lock()
-	projectName = cmd.Name
-	mu.Unlock()
+	SetProjectName(cmd.Name)
 
 	if cmd.commands == nil {
 		cmd.commands = make([]*Command, 0)

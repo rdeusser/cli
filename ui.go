@@ -37,8 +37,6 @@ func ProjectName() string {
 }
 
 func SetProjectName(name string) {
-	mu.Lock()
-	defer mu.Unlock()
 	projectName = name
 }
 
@@ -47,8 +45,6 @@ func OuptutLevel() OutputLevel {
 }
 
 func SetOutputLevel(level OutputLevel) {
-	mu.Lock()
-	defer mu.Unlock()
 	outputLevel = level
 }
 
