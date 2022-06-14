@@ -16,7 +16,7 @@ func captureOutput(f func()) string {
 }
 
 func TestOutput(t *testing.T) {
-	projectName.Store("foo")
+	SetProjectName("foo")
 
 	t.Run("Output", func(t *testing.T) {
 		output := captureOutput(func() {
@@ -69,5 +69,4 @@ func TestOutput(t *testing.T) {
 
 		assert.Equal(t, expected, output)
 	})
-
 }
