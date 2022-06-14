@@ -24,6 +24,8 @@ const (
 	ColorGreen  = termenv.ANSIGreen
 )
 
+const prefix = "[%s][%s]:"
+
 var (
 	ProjectName = ""
 	NoColor     = false
@@ -36,28 +38,28 @@ func Print(format string, args ...interface{}) {
 
 func Debug(format string, args ...interface{}) {
 	if EnableDebug {
-		fmt.Fprintln(Output, colorize(ColorYellow, "[%s][%s]:", DebugLevel, ProjectName), fmt.Sprintf(format, args...))
+		fmt.Fprintln(Output, colorize(ColorYellow, prefix, DebugLevel, ProjectName), fmt.Sprintf(format, args...))
 	}
 }
 
 func Info(format string, args ...interface{}) {
-	fmt.Fprintln(Output, colorize(ColorGreen, "[%s][%s]:", InfoLevel, ProjectName), fmt.Sprintf(format, args...))
+	fmt.Fprintln(Output, colorize(ColorGreen, prefix, InfoLevel, ProjectName), fmt.Sprintf(format, args...))
 }
 
 func Warn(format string, args ...interface{}) {
-	fmt.Fprintln(Output, colorize(ColorYellow, "[%s][%s]:", WarnLevel, ProjectName), fmt.Sprintf(format, args...))
+	fmt.Fprintln(Output, colorize(ColorYellow, prefix, WarnLevel, ProjectName), fmt.Sprintf(format, args...))
 }
 
 func Error(format string, args ...interface{}) {
-	fmt.Fprintln(Output, colorize(ColorRed, "[%s][%s]:", ErrorLevel, ProjectName), fmt.Sprintf(format, args...))
+	fmt.Fprintln(Output, colorize(ColorRed, prefix, ErrorLevel, ProjectName), fmt.Sprintf(format, args...))
 }
 
 func Fatal(format string, args ...interface{}) {
-	fmt.Fprintln(Output, colorize(ColorRed, "[%s][%s]:", FatalLevel, ProjectName), fmt.Sprintf(format, args...))
+	fmt.Fprintln(Output, colorize(ColorRed, prefix, FatalLevel, ProjectName), fmt.Sprintf(format, args...))
 }
 
 func Panic(format string, args ...interface{}) {
-	s := fmt.Sprint(colorize(ColorRed, "[%s][%s]:", PanicLevel, ProjectName), fmt.Sprintf(format, args...))
+	s := fmt.Sprint(colorize(ColorRed, prefix, PanicLevel, ProjectName), fmt.Sprintf(format, args...))
 	panic(s)
 }
 
