@@ -39,7 +39,7 @@ func Run(runner Runner) (Command, error) {
 	cmd.runners[cmd.Name] = runner
 
 	if err := cmd.parseCommands(cmd.Name, os.Args[1:]); err != nil {
-		if errors.Is(err, PrintHelp) {
+		if errors.Is(err, ErrPrintHelp) {
 			return cmd, nil
 		}
 
@@ -179,18 +179,18 @@ func (c *Command) parseCommands(name string, args []string) error {
 	c.fullName = name
 
 	if err := c.parseFlags(args); err != nil {
-		if errors.Is(err, PrintHelp) {
+		if errors.Is(err, ErrPrintHelp) {
 			c.PrintHelp()
-			return PrintHelp
+			return ErrPrintHelp
 		}
 
 		return err
 	}
 
 	if err := c.runner.Run(args); err != nil {
-		if errors.Is(err, PrintHelp) {
+		if errors.Is(err, ErrPrintHelp) {
 			c.PrintHelp()
-			return PrintHelp
+			return ErrPrintHelp
 		}
 
 		return err
@@ -225,7 +225,7 @@ func (c *Command) parseFlags(args []string) error {
 			// therefore it is invalid.
 			err := ErrOptionNotDefined{arg: arg}
 			fmt.Fprintln(Output, err.Error())
-			return PrintHelp
+			return ErrPrintHelp
 		}
 
 		option, err := flag.Option()
@@ -234,7 +234,7 @@ func (c *Command) parseFlags(args []string) error {
 		}
 
 		if option.Shorthand == HelpFlag.Shorthand || option.Name == HelpFlag.Name {
-			return PrintHelp
+			return ErrPrintHelp
 		}
 
 		if option.Shorthand == VersionFlag.Shorthand || option.Name == VersionFlag.Name {
@@ -268,11 +268,7 @@ func (c *Command) parseFlags(args []string) error {
 		}
 	}
 
-	if err := c.checkRequiredOptions(); err != nil {
-		return err
-	}
-
-	return nil
+	return c.checkRequiredOptions()
 }
 
 func (c *Command) parseUsage() {

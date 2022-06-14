@@ -7,7 +7,7 @@ import (
 )
 
 var (
-	PrintHelp           = errors.New("help")
+	ErrPrintHelp        = errors.New("help")
 	ErrInvalidShorthand = errors.New("shorthand must be a single letter/number")
 )
 
