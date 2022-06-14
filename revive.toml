@@ -4,28 +4,47 @@ confidence = 0.8
 errorCode = 0
 warningCode = 0
 
-[rule.blank-imports]
-[rule.context-as-argument]
-[rule.context-keys-type]
-[rule.dot-imports]
-[rule.empty-block]
-[rule.error-naming]
-[rule.error-return]
-[rule.error-strings]
-[rule.errorf]
-[rule.if-return]
-[rule.increment-decrement]
-[rule.indent-error-flow]
-[rule.package-comments]
-[rule.range]
-[rule.receiver-naming]
-[rule.redefines-builtin-id]
-[rule.superfluous-else]
-[rule.time-naming]
-[rule.unexported-naming]
-[rule.unexported-return]
-[rule.unreachable-code]
-[rule.unused-parameter]
-[rule.var-declaration]
+# Enable all available rules.
+enableAllRules = true
+
+# Rule tuning.
+[rule.add-constant]
+  arguments = [{maxLitCount = "5", allowStrs = "\"\"", allowInts = "0,1", allowFloats = "0.0"}]
+
+[rule.argument-limit]
+  arguments = [4]
+
+[rule.cognitive-complexity]
+  arguments = [9]
+
+[rule.cyclomatic]
+  arguments = [8]
+
+[rule.function-result-limit]
+  arguments = [3]
+
 [rule.var-naming]
   arguments = [[""], ["ID", "VM"]]
+
+# Disabled rules.
+[rule.banned-characters]
+  disabled = true
+
+[rule.exported]
+  disabled = true
+
+[rule.file-header]
+  disabled = true
+
+[rule.function-length]
+  disabled = true
+
+[rule.line-length-limit]
+  disabled = true
+
+[rule.max-public-structs]
+  disabled = true
+
+# Project supports Go 1.17 and up so we can't enable this yet.
+[rule.use-any]
+  disabled = true
