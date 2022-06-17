@@ -8,6 +8,8 @@ import (
 
 	"github.com/hexops/autogold"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/rdeusser/cli/internal/types"
 )
 
 var boolFlag = &BoolFlag{
@@ -30,7 +32,7 @@ func (boolCommand) Init() Command {
 	}
 }
 
-func (boolCommand) Run(args []string) error {
+func (boolCommand) Run() error {
 	return nil
 }
 
@@ -88,7 +90,7 @@ func TestBoolFlag(t *testing.T) {
 			cmd, err = Run(&boolCommand{})
 			assert.NoError(t, err)
 
-			assert.Equal(t, Bool, boolFlag.Type())
+			assert.Equal(t, types.BoolType, boolFlag.Type())
 			assert.Equal(t, tt.expected, boolFlag.Get())
 			assert.Equal(t, strconv.FormatBool(tt.expected), boolFlag.String())
 

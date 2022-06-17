@@ -25,7 +25,7 @@ func (rootCommand) Init() Command {
 	return cmd
 }
 
-func (rootCommand) Run(args []string) error {
+func (rootCommand) Run() error {
 	fmt.Fprintln(Output, "running from the root command")
 	return nil
 }
@@ -45,7 +45,7 @@ func (serverCommand) Init() Command {
 	return cmd
 }
 
-func (serverCommand) Run(args []string) error {
+func (serverCommand) Run() error {
 	fmt.Fprintln(Output, "running from server subcommand")
 	return nil
 }
@@ -59,7 +59,7 @@ func (serverStartCommand) Init() Command {
 	}
 }
 
-func (serverStartCommand) Run(args []string) error {
+func (serverStartCommand) Run() error {
 	fmt.Fprintln(Output, "running from server start subcommand")
 	return nil
 }

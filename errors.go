@@ -11,27 +11,46 @@ var (
 	ErrInvalidShorthand = errors.New("shorthand must be a single letter/number")
 )
 
-type ErrOptionAlreadyDefined struct {
-	opt OptionGetter
+type ErrFlagAlreadyDefined struct {
+	option FlagOptionGetter
 }
 
-func (e ErrOptionAlreadyDefined) Error() string {
-	if e.opt == nil {
-		return colorize(ColorRed, "option already defined, but is nil")
+func (e ErrFlagAlreadyDefined) Error() string {
+	if e.option == nil {
+		return colorize(ColorRed, "flag already defined, but is nil")
 	}
 
-	opt, err := e.opt.Option()
-	if err != nil {
-		return errors.Wrapf(err, "%s %v", colorize(ColorRed, "option (type %s) already defined:", opt.Type()), opt.Name).Error()
-	}
+	option := e.option.Option()
 
-	return fmt.Sprintf("%s %v", colorize(ColorRed, "option (type %s) already defined:", opt.Type()), opt.Name)
+	return fmt.Sprintf("%s %v", colorize(ColorRed, "flag (type %s) already defined:", option.Type()), option.Name)
 }
 
-type ErrOptionNotDefined struct {
+type ErrFlagNotDefined struct {
+	flag string
+}
+
+func (e ErrFlagNotDefined) Error() string {
+	return fmt.Sprintf("* %s %v\n", colorize(ColorRed, "flag provided but not defined:"), e.flag)
+}
+
+type ErrArgAlreadyDefined struct {
+	option ArgOptionGetter
+}
+
+func (e ErrArgAlreadyDefined) Error() string {
+	if e.option == nil {
+		return colorize(ColorRed, "arg already defined, but is nil")
+	}
+
+	option := e.option.Option()
+
+	return fmt.Sprintf("%s %v", colorize(ColorRed, "arg (type %s) already defined:", option.Type()), option.Name)
+}
+
+type ErrArgNotDefined struct {
 	arg string
 }
 
-func (e ErrOptionNotDefined) Error() string {
-	return fmt.Sprintf("* %s %v\n", colorize(ColorRed, "option provided but not defined:"), e.arg)
+func (e ErrArgNotDefined) Error() string {
+	return fmt.Sprintf("* %s %v\n", colorize(ColorRed, "arg provided but not defined:"), e.arg)
 }

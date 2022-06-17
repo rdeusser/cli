@@ -15,7 +15,7 @@ var Output = colorable.NewColorableStdout()
 
 type Runner interface {
 	Init() Command
-	Run([]string) error
+	Run() error
 }
 
 func Run(runner Runner) (Command, error) {
@@ -63,16 +63,14 @@ type Command struct {
 	Version string
 
 	// Flags is the full set of flags passed to the command.
-	Flags []Flag
+	Flags Flags
 
-	// actual is the full set of flags passed to the command.
-	actual map[Option]Flag
+	// Args is the arguments passed to the command after flags have been
+	// processed.
+	Args Args
 
-	// formal is the full set of flags represented as options.
-	formal []Option
-
-	// args is the full set of arguments passed to the command.
-	// args []Option
+	// flags is the full set of flags.
+	flags []FlagOption
 
 	// commands is a list of commands.
 	commands []*Command
@@ -187,7 +185,7 @@ func (c *Command) parseCommands(name string, args []string) error {
 		return err
 	}
 
-	if err := c.runner.Run(args); err != nil {
+	if err := c.runner.Run(); err != nil {
 		if errors.Is(err, ErrPrintHelp) {
 			c.PrintHelp()
 			return ErrPrintHelp
@@ -223,15 +221,12 @@ func (c *Command) parseFlags(args []string) error {
 		if !ok {
 			// This flag is not present in the commands list of flags
 			// therefore it is invalid.
-			err := ErrOptionNotDefined{arg: arg}
+			err := ErrFlagNotDefined{flag: arg}
 			fmt.Fprintln(Output, err.Error())
 			return ErrPrintHelp
 		}
 
-		option, err := flag.Option()
-		if err != nil {
-			return err
-		}
+		option := flag.Option()
 
 		if option.Shorthand == HelpFlag.Shorthand || option.Name == HelpFlag.Name {
 			return ErrPrintHelp
@@ -249,14 +244,14 @@ func (c *Command) parseFlags(args []string) error {
 			if err := x.Set("true"); err != nil {
 				return err
 			}
-		case *StringSliceFlag:
-			x.Clear()
+		// case *StringSliceFlag:
+		// 	x.Clear()
 
-			for _, v := range flagArgs[1:] {
-				if err := x.Set(v); err != nil {
-					return err
-				}
-			}
+		// 	for _, v := range flagArgs[1:] {
+		// 		if err := x.Set(v); err != nil {
+		// 			return err
+		// 		}
+		// 	}
 		default:
 			flagArgs = flagArgs[1:]
 
@@ -271,8 +266,12 @@ func (c *Command) parseFlags(args []string) error {
 	return c.checkRequiredOptions()
 }
 
+func (c *Command) parseArgs(args []string) error {
+	return nil
+}
+
 func (c *Command) parseUsage() {
-	for _, flag := range c.formal {
+	for _, flag := range c.flags {
 		name := colorize(ColorGreen, "--%s", flag.Name)
 		shorthand := colorize(ColorGreen, "-%s", flag.Shorthand)
 		usage := flag.Desc
@@ -307,17 +306,14 @@ func (c *Command) addParentFlags(parent *Command) error {
 	return nil
 }
 
+// addFlags adds the flags passed to the command as flag options for parsing.
 func (c *Command) addFlags() error {
 	if c.Flags == nil {
 		c.Flags = make([]Flag, 0)
 	}
 
-	if c.actual == nil {
-		c.actual = make(map[Option]Flag)
-	}
-
-	if c.formal == nil {
-		c.formal = make([]Option, 0)
+	if c.flags == nil {
+		c.flags = make([]FlagOption, 0)
 	}
 
 	seen := make(map[Flag]struct{})
@@ -344,20 +340,18 @@ func (c *Command) addFlags() error {
 }
 
 func (c *Command) addFlag(flag Flag) error {
-	opt, err := flag.Option()
-	if err != nil {
-		return err
+	if err := flag.Apply(); err != nil {
+		return fmt.Errorf("%v: applying flag", err)
 	}
 
-	c.actual[opt] = flag
-	c.formal = append(c.formal, opt)
+	c.flags = append(c.flags, flag.Option())
 	return nil
 }
 
 func (c *Command) checkRequiredOptions() error {
 	result := &multierror.Error{}
 
-	for _, option := range c.formal {
+	for _, option := range c.flags {
 		if !option.HasBeenSet() && option.Required {
 			var err error
 
@@ -379,7 +373,7 @@ func (c *Command) sortCommands() {
 }
 
 func (c *Command) sortFlags() {
-	sort.Sort(SortOptionsByName(c.formal))
+	sort.Sort(SortFlagOptionsByName(c.flags))
 }
 
 func (c *Command) lookupCommand(arg string) (*Command, bool) {
@@ -392,12 +386,12 @@ func (c *Command) lookupCommand(arg string) (*Command, bool) {
 }
 
 func (c *Command) lookupFlag(arg string) (Flag, bool) {
-	for option, flag := range c.actual {
-		if option.Shorthand == arg || option.Name == arg {
-			return flag, true
-		}
+	flag := c.Flags.Lookup(arg, arg)
+	if flag == nil {
+		return nil, false
 	}
-	return nil, false
+
+	return flag, true
 }
 
 func (c *Command) isFlag(arg string) bool {
