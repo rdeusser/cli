@@ -8,29 +8,29 @@ import (
 	"github.com/rdeusser/cli/internal/types"
 )
 
-// BoolFlag is a bool flag.
-type BoolFlag struct {
-	Bind      *bool
+// IntFlag is a int flag.
+type IntFlag struct {
+	Bind      *int
 	Name      string
 	Shorthand string
 	Desc      string
-	Default   bool
+	Default   int
 	EnvVar    string
 	Required  bool
 
 	option FlagOption
-	value  *types.Bool
+	value  *types.Int
 }
 
-// String returns a string-formatted bool value.
-func (f *BoolFlag) String() string {
+// String returns a string-formatted int value.
+func (f *IntFlag) String() string {
 	return f.value.String()
 }
 
-// Set sets the bool flag's value.
-func (f *BoolFlag) Set(s string) error {
+// Set sets the int flag's value.
+func (f *IntFlag) Set(s string) error {
 	if f.value == nil {
-		f.value = types.NewBool(nil, f.Default)
+		f.value = types.NewInt(nil, f.Default)
 	}
 
 	if len(f.Shorthand) > 1 {
@@ -40,7 +40,7 @@ func (f *BoolFlag) Set(s string) error {
 	envVar := strings.TrimSpace(f.EnvVar)
 	if v, ok := os.LookupEnv(envVar); ok {
 		if err := f.value.Set(v); err != nil {
-			return errors.Wrapf(err, "setting %s as a bool value for the %s flag", v, f.Name)
+			return errors.Wrapf(err, "setting %s as a int value for the %s flag", v, f.Name)
 		}
 	}
 
@@ -48,27 +48,27 @@ func (f *BoolFlag) Set(s string) error {
 	return nil
 }
 
-// Get gets the value of the bool flag.
-func (f *BoolFlag) Get() bool {
+// Get gets the value of the int flag.
+func (f *IntFlag) Get() int {
 	return f.value.Get()
 }
 
 // Type returns the type of the flag.
-func (f *BoolFlag) Type() types.Type {
-	return types.BoolType
+func (f *IntFlag) Type() types.Type {
+	return types.IntType
 }
 
 // Option returns the option for the flag.
-func (f *BoolFlag) Option() FlagOption {
+func (f *IntFlag) Option() FlagOption {
 	return f.option
 }
 
 // Apply applies the default (or already set) options for the flag. Most
 // notably, it doesn't indicate that the flag has actually been set
 // yet. That's the job of the parser.
-func (f *BoolFlag) Apply() error {
+func (f *IntFlag) Apply() error {
 	if f.value == nil {
-		f.value = types.NewBool(f.Bind, f.Default)
+		f.value = types.NewInt(f.Bind, f.Default)
 	}
 
 	f.option = FlagOption{

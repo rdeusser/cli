@@ -1,8 +1,6 @@
 package cli
 
 import (
-	"flag"
-
 	"github.com/rdeusser/cli/internal/types"
 )
 
@@ -15,12 +13,12 @@ type ArgOptionGetter interface {
 // Args is a collection of arguments.
 type Args []Arg
 
-// Lookup looks up an argument by name.
-func (a *Args) Lookup(name string) Arg {
+// Lookup looks up an argument by position.
+func (a *Args) Lookup(position int) Arg {
 	for _, arg := range *a {
 		option := arg.Option()
 
-		if option.Name == name {
+		if option.Position == position {
 			return arg
 		}
 	}
@@ -30,22 +28,22 @@ func (a *Args) Lookup(name string) Arg {
 
 // Arg is an interface for defining arguments.
 type Arg interface {
-	flag.Value
+	Value
+	types.Getter
 	ArgOptionGetter
+
+	Apply() error
 }
 
 // ArgOption represents all possible underlying argument type.
 type ArgOption struct {
-	// typ represents the underlying argument type.
-	typ types.Type
+	// Bind is a variable or field to set.
+	Bind interface{}
 
 	// Name is the name of the argument.
 	//
 	// This is only useful in showing help or examples.
 	Name string
-
-	// Bind is a variable or field to set.
-	Bind interface{}
 
 	// Desc is the description of this argument.
 	Desc string
@@ -59,11 +57,25 @@ type ArgOption struct {
 
 	// Required indicates whether this argument is required.
 	Required bool
+
+	// typ represents the underlying argument type.
+	typ types.Type
+
+	// hasBeenSet indicates whether or not the arg was set explicitly.
+	//
+	// The purpose of this field is to distinguish between a default value
+	// and when an arg was explicitly set.
+	hasBeenSet bool
 }
 
 // Type returns the type of the arg.
 func (o ArgOption) Type() types.Type {
 	return o.typ
+}
+
+// HasBeenSet indicates if the argument was provided to the command.
+func (o ArgOption) HasBeenSet() bool {
+	return o.hasBeenSet
 }
 
 // SortArgOptionsByName sorts args by name.

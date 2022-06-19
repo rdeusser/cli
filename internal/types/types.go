@@ -35,6 +35,10 @@ func NewBool(into *bool, v bool) *Bool {
 	return (*Bool)(into)
 }
 
+func (v *Bool) String() string {
+	return strconv.FormatBool(bool(*v))
+}
+
 func (v *Bool) Set(s string) error {
 	b, err := strconv.ParseBool(s)
 	if err != nil {
@@ -45,8 +49,8 @@ func (v *Bool) Set(s string) error {
 	return nil
 }
 
-func (v *Bool) String() string {
-	return strconv.FormatBool(bool(*v))
+func (v *Bool) Get() bool {
+	return bool(*v)
 }
 
 func (v *Bool) Type() Type {
@@ -64,12 +68,16 @@ func NewString(into *string, v string) *String {
 	return (*String)(into)
 }
 
+func (v *String) String() string {
+	return string(*v)
+}
+
 func (v *String) Set(s string) error {
 	*v = String(s)
 	return nil
 }
 
-func (v *String) String() string {
+func (v *String) Get() string {
 	return string(*v)
 }
 
@@ -88,6 +96,10 @@ func NewInt(into *int, v int) *Int {
 	return (*Int)(into)
 }
 
+func (v *Int) String() string {
+	return strconv.Itoa(int(*v))
+}
+
 func (v *Int) Set(s string) error {
 	i, err := strconv.ParseInt(s, 10, 64)
 	if err != nil {
@@ -98,8 +110,8 @@ func (v *Int) Set(s string) error {
 	return nil
 }
 
-func (v *Int) String() string {
-	return strconv.Itoa(int(*v))
+func (v *Int) Get() int {
+	return int(*v)
 }
 
 func (v *Int) Type() Type {
@@ -117,6 +129,10 @@ func NewFloat64(into *float64, v float64) *Float64 {
 	return (*Float64)(into)
 }
 
+func (v *Float64) String() string {
+	return strconv.FormatFloat(float64(*v), 'g', -1, 64)
+}
+
 func (v *Float64) Set(s string) error {
 	f, err := strconv.ParseFloat(s, 64)
 	if err != nil {
@@ -127,8 +143,8 @@ func (v *Float64) Set(s string) error {
 	return nil
 }
 
-func (v *Float64) String() string {
-	return strconv.FormatFloat(float64(*v), 'g', -1, 64)
+func (v *Float64) Get() float64 {
+	return float64(*v)
 }
 
 func (v *Float64) Type() Type {
@@ -146,6 +162,10 @@ func NewDuration(into *time.Duration, v time.Duration) *Duration {
 	return (*Duration)(into)
 }
 
+func (v *Duration) String() string {
+	return time.Duration(*v).String()
+}
+
 func (v *Duration) Set(s string) error {
 	d, err := time.ParseDuration(s)
 	if err != nil {
@@ -156,8 +176,8 @@ func (v *Duration) Set(s string) error {
 	return nil
 }
 
-func (v *Duration) String() string {
-	return time.Duration(*v).String()
+func (v *Duration) Get() time.Duration {
+	return time.Duration(*v)
 }
 
 func (v *Duration) Type() Type {
@@ -175,24 +195,30 @@ func NewStringSlice(into *[]string, v []string) *StringSlice {
 	return (*StringSlice)(into)
 }
 
-func (v *StringSlice) Set(s string) error {
-	*v = append(*v, s)
-	return nil
-}
-
 func (v *StringSlice) String() string {
 	sb := new(strings.Builder)
 
 	sb.WriteString("[")
+
 	for i, s := range *v {
 		if i > 0 {
 			sb.WriteString(", ")
 		}
 		sb.WriteString(fmt.Sprintf("%#v", s))
 	}
+
 	sb.WriteString("]")
 
 	return sb.String()
+}
+
+func (v *StringSlice) Set(s string) error {
+	*v = append(*v, s)
+	return nil
+}
+
+func (v *StringSlice) Get() []string {
+	return *v
 }
 
 func (v *StringSlice) Type() Type {

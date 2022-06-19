@@ -8,29 +8,29 @@ import (
 	"github.com/rdeusser/cli/internal/types"
 )
 
-// BoolFlag is a bool flag.
-type BoolFlag struct {
-	Bind      *bool
+// StringFlag is a string flag.
+type StringFlag struct {
+	Bind      *string
 	Name      string
 	Shorthand string
 	Desc      string
-	Default   bool
+	Default   string
 	EnvVar    string
 	Required  bool
 
 	option FlagOption
-	value  *types.Bool
+	value  *types.String
 }
 
-// String returns a string-formatted bool value.
-func (f *BoolFlag) String() string {
+// String returns a string-formatted string value.
+func (f *StringFlag) String() string {
 	return f.value.String()
 }
 
-// Set sets the bool flag's value.
-func (f *BoolFlag) Set(s string) error {
+// Set sets the string flag's value.
+func (f *StringFlag) Set(s string) error {
 	if f.value == nil {
-		f.value = types.NewBool(nil, f.Default)
+		f.value = types.NewString(nil, f.Default)
 	}
 
 	if len(f.Shorthand) > 1 {
@@ -40,7 +40,7 @@ func (f *BoolFlag) Set(s string) error {
 	envVar := strings.TrimSpace(f.EnvVar)
 	if v, ok := os.LookupEnv(envVar); ok {
 		if err := f.value.Set(v); err != nil {
-			return errors.Wrapf(err, "setting %s as a bool value for the %s flag", v, f.Name)
+			return errors.Wrapf(err, "setting %s as a string value for the %s flag", v, f.Name)
 		}
 	}
 
@@ -48,27 +48,27 @@ func (f *BoolFlag) Set(s string) error {
 	return nil
 }
 
-// Get gets the value of the bool flag.
-func (f *BoolFlag) Get() bool {
+// Get gets the value of the string flag.
+func (f *StringFlag) Get() string {
 	return f.value.Get()
 }
 
 // Type returns the type of the flag.
-func (f *BoolFlag) Type() types.Type {
-	return types.BoolType
+func (f *StringFlag) Type() types.Type {
+	return types.StringType
 }
 
 // Option returns the option for the flag.
-func (f *BoolFlag) Option() FlagOption {
+func (f *StringFlag) Option() FlagOption {
 	return f.option
 }
 
 // Apply applies the default (or already set) options for the flag. Most
 // notably, it doesn't indicate that the flag has actually been set
 // yet. That's the job of the parser.
-func (f *BoolFlag) Apply() error {
+func (f *StringFlag) Apply() error {
 	if f.value == nil {
-		f.value = types.NewBool(f.Bind, f.Default)
+		f.value = types.NewString(f.Bind, f.Default)
 	}
 
 	f.option = FlagOption{

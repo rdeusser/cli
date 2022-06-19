@@ -1,6 +1,3 @@
-//go:build ignore
-// +build ignore
-
 package main
 
 import (
@@ -26,11 +23,11 @@ func (Minimal) Init() cli.Command {
 }
 
 func (Minimal) Run() error {
-	return nil
+	return cli.ErrPrintHelp
 }
 
 func main() {
-	if err := cli.Run(&Minimal{}); err != nil {
+	if _, err := cli.Run(&Minimal{}); err != nil {
 		log.Fatal(err)
 	}
 }

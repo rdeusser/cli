@@ -5,6 +5,7 @@ go 1.17
 require (
 	github.com/hashicorp/go-multierror v1.1.0
 	github.com/hexops/autogold v1.2.0
+	github.com/kr/pretty v0.2.1
 	github.com/mattn/go-colorable v0.1.12
 	github.com/muesli/termenv v0.7.4
 	github.com/pkg/errors v0.9.1
@@ -17,7 +18,7 @@ require (
 	github.com/hashicorp/errwrap v1.0.0 // indirect
 	github.com/hexops/gotextdiff v1.0.3 // indirect
 	github.com/hexops/valast v1.3.0 // indirect
-	github.com/kr/pretty v0.2.1 // indirect
+	github.com/kr/text v0.1.0 // indirect
 	github.com/lucasb-eyer/go-colorful v1.0.3 // indirect
 	github.com/mattn/go-isatty v0.0.14 // indirect
 	github.com/mattn/go-runewidth v0.0.9 // indirect

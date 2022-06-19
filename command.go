@@ -4,10 +4,12 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"reflect"
 	"sort"
 	"strings"
 
 	"github.com/hashicorp/go-multierror"
+	"github.com/kr/pretty"
 	"github.com/mattn/go-colorable"
 )
 
@@ -69,8 +71,11 @@ type Command struct {
 	// processed.
 	Args Args
 
-	// flags is the full set of flags.
+	// flags is the full set of flag options.
 	flags []FlagOption
+
+	// args it he full set of arg options.
+	args []ArgOption
 
 	// commands is a list of commands.
 	commands []*Command
@@ -119,6 +124,7 @@ func (c *Command) FullName() string {
 	if c.fullName == "" {
 		return c.Name
 	}
+
 	return c.fullName
 }
 
@@ -182,6 +188,10 @@ func (c *Command) parseCommands(name string, args []string) error {
 			return ErrPrintHelp
 		}
 
+		return err
+	}
+
+	if err := c.parseArgs(args); err != nil {
 		return err
 	}
 
@@ -263,13 +273,74 @@ func (c *Command) parseFlags(args []string) error {
 		}
 	}
 
-	return c.checkRequiredOptions()
+	return c.checkRequiredFlagOptions()
 }
 
 func (c *Command) parseArgs(args []string) error {
-	return nil
+	if err := c.addArgs(); err != nil {
+		return err
+	}
+
+	argArgs := args
+	cmds := strings.Fields(c.FullName())
+
+	if len(args) >= len(cmds) {
+		for i, cmd := range cmds {
+			// We should be okay to do this without any issues, but we'll
+			// find out.
+			if args[i] == cmd {
+				argArgs = args[i+1:]
+			}
+		}
+	}
+
+	for i, arg := range argArgs {
+		// If we've encountered a flag move past it.
+		if c.isFlag(arg) {
+			argArgs = argArgs[i+1:]
+		}
+	}
+
+	// By this point we should have already moved past the command,
+	// subcommands, and flags.
+	for i, arg := range argArgs {
+		actual, ok := c.lookupArg(i)
+		if !ok {
+			// This arg is not present in the commands list of args
+			// therefore it is invalid.
+			err := ErrArgNotDefined{arg: arg}
+			fmt.Fprintln(Output, err.Error())
+			return ErrPrintHelp
+		}
+
+		if err := actual.Set(arg); err != nil {
+			return err
+		}
+
+		switch x := actual.(type) {
+		case *BoolArg:
+			if err := x.Set(arg); err != nil {
+				return nil
+			}
+		default:
+			if err := x.Set(arg); err != nil {
+				return nil
+			}
+		}
+
+		// Flags have an actual name or shorthand we can find in the
+		// input, but arguments don't so we have to do this a little bit
+		// differently by setting the value of the argument and then
+		// updating the value in the command.
+		if err := c.updateArg(actual); err != nil {
+			return err
+		}
+	}
+
+	return c.checkRequiredArgOptions()
 }
 
+// parseUsage generates usage strings for flags, arguments, and commands.
 func (c *Command) parseUsage() {
 	for _, flag := range c.flags {
 		name := colorize(ColorGreen, "--%s", flag.Name)
@@ -290,6 +361,7 @@ func (c *Command) parseUsage() {
 	}
 }
 
+// addParentFlags adds the flags the parent currently has to this command.
 func (c *Command) addParentFlags(parent *Command) error {
 	seen := make(map[Flag]struct{})
 
@@ -339,6 +411,7 @@ func (c *Command) addFlags() error {
 	return nil
 }
 
+// addFlag adds a flag option to the command.
 func (c *Command) addFlag(flag Flag) error {
 	if err := flag.Apply(); err != nil {
 		return fmt.Errorf("%v: applying flag", err)
@@ -348,17 +421,113 @@ func (c *Command) addFlag(flag Flag) error {
 	return nil
 }
 
-func (c *Command) checkRequiredOptions() error {
+// addArgs adds the arguments provided to the command as arg options to the
+// command.
+func (c *Command) addArgs() error {
+	if c.Args == nil {
+		c.Args = make([]Arg, 0)
+	}
+
+	if c.args == nil {
+		c.args = make([]ArgOption, 0)
+	}
+
+	for _, arg := range c.Args {
+		if err := c.addArg(arg); err != nil {
+			return err
+		}
+	}
+
+	if !c.consecutiveArgPositions() {
+		return fmt.Errorf("positions in args for %s command are not in consecutive order", c.Name)
+	}
+
+	return nil
+}
+
+// addArg adds an argument to the command.
+func (c *Command) addArg(arg Arg) error {
+	if err := arg.Apply(); err != nil {
+		return err
+	}
+
+	c.args = append(c.args, arg.Option())
+	return nil
+}
+
+// updateArg updates the arg option for a command.
+func (c *Command) updateArg(arg Arg) error {
+	argOption := arg.Option()
+
+	for i, option := range c.args {
+		// If the name and the position are the same for the provided
+		// arg and the one we already have, they're definitely the same.
+		if argOption.Name == option.Name && argOption.Position == option.Position {
+			c.args[i] = argOption
+		}
+	}
+
+	return nil
+}
+
+// consecutiveArgPositions validates that the args added to the command have the
+// correct positions.
+//
+// For example, if arg 1 has position 0 but arg 2 has position 3, that isn't
+// valid.
+func (c *Command) consecutiveArgPositions() bool {
+	positions := make([]int, 0)
+
+	for _, option := range c.args {
+		positions = append(positions, option.Position)
+	}
+
+	for i := 0; i < len(positions); i++ {
+		if i+1 == len(positions) {
+			break // we're at the end
+		}
+
+		if positions[i]+1 != positions[i+1] {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (c *Command) checkRequiredFlagOptions() error {
 	result := &multierror.Error{}
 
-	for _, option := range c.flags {
-		if !option.HasBeenSet() && option.Required {
+	for _, flag := range c.flags {
+		if !flag.HasBeenSet() && flag.Required {
 			var err error
 
-			if option.Shorthand != "" {
-				err = fmt.Errorf(colorize(ColorRed, "-%s, --%s is required", option.Shorthand, option.Name))
+			if flag.Shorthand != "" {
+				err = fmt.Errorf(colorize(ColorRed, "-%s, --%s is required", flag.Shorthand, flag.Name))
 			} else {
-				err = fmt.Errorf(colorize(ColorRed, "--%s is required", option.Name))
+				err = fmt.Errorf(colorize(ColorRed, "--%s is required", flag.Name))
+			}
+
+			_ = multierror.Append(result, err)
+		}
+	}
+
+	return result.ErrorOrNil()
+}
+
+func (c *Command) checkRequiredArgOptions() error {
+	result := &multierror.Error{}
+
+	for _, arg := range c.args {
+		if !arg.HasBeenSet() && arg.Required {
+			var err error
+
+			pretty.Println(arg)
+
+			if arg.Name != "" {
+				err = fmt.Errorf(colorize(ColorRed, "%s is required", arg.Name))
+			} else {
+				err = fmt.Errorf(colorize(ColorRed, "%s is required", reflect.TypeOf(arg).Name()))
 			}
 
 			_ = multierror.Append(result, err)
@@ -385,8 +554,8 @@ func (c *Command) lookupCommand(arg string) (*Command, bool) {
 	return nil, false
 }
 
-func (c *Command) lookupFlag(arg string) (Flag, bool) {
-	flag := c.Flags.Lookup(arg, arg)
+func (c *Command) lookupFlag(name string) (Flag, bool) {
+	flag := c.Flags.Lookup(name, name)
 	if flag == nil {
 		return nil, false
 	}
@@ -394,10 +563,20 @@ func (c *Command) lookupFlag(arg string) (Flag, bool) {
 	return flag, true
 }
 
+func (c *Command) lookupArg(position int) (Arg, bool) {
+	arg := c.Args.Lookup(position)
+	if arg == nil {
+		return nil, false
+	}
+
+	return arg, true
+}
+
 func (c *Command) isFlag(arg string) bool {
 	if strings.HasPrefix(arg, "-") || strings.HasPrefix(arg, "--") {
 		return true
 	}
+
 	return false
 }
 

@@ -1,8 +1,6 @@
 package cli
 
 import (
-	stdflag "flag"
-
 	"github.com/rdeusser/cli/internal/types"
 )
 
@@ -44,7 +42,7 @@ func (f *Flags) Lookup(shorthand, name string) Flag {
 
 // Flag is an interface for defining flags.
 type Flag interface {
-	stdflag.Value
+	Value
 	types.Getter
 	FlagOptionGetter
 
@@ -53,15 +51,37 @@ type Flag interface {
 
 // FlagOption represents all possible underlying flag types.
 type FlagOption struct {
+	// Bind is a variable or field to set.
+	Bind interface{}
+
+	// Name is the name of the flag.
+	Name string
+
+	// Shorthand is the short version of the name
+	// (e.g. -h inplace of --help).
+	Shorthand string
+
+	// Desc is the description of this flag.
+	Desc string
+
+	// Default is the default value for this option
+	Default string
+
+	// EnvVar is the environment variable to set the flag to if the flag
+	// itself wasn't provided.
+	EnvVar string
+
+	// Required indicates whether this flag is required.
+	Required bool
+
+	// typ represents the underlying flag type.
 	typ types.Type
 
-	Name      string
-	Shorthand string
-	Desc      string
-	Default   string
-	Value     stdflag.Value
-	EnvVar    string
-	Required  bool
+	// hasBeenSet indicates whether or not the flag was set explicitly.
+	//
+	// The purpose of this field is to distinguish between a default value
+	// and when an flag was explicitly set.
+	hasBeenSet bool
 }
 
 // Type returns the type of the flag.
