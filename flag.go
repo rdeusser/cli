@@ -91,7 +91,7 @@ func (o FlagOption) Type() types.Type {
 
 // HasBeenSet indicates if the flag has been set.
 func (o FlagOption) HasBeenSet() bool {
-	return o.Value.String() != ""
+	return o.hasBeenSet
 }
 
 // SortFlagOptionsByName sorts flags by name.

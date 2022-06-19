@@ -276,6 +276,7 @@ func (c *Command) parseFlags(args []string) error {
 	return c.checkRequiredFlagOptions()
 }
 
+// parseArgs parses the arguments passed to a command.
 func (c *Command) parseArgs(args []string) error {
 	if err := c.addArgs(); err != nil {
 		return err
