@@ -6,54 +6,54 @@ import (
 	"github.com/rdeusser/cli/internal/types"
 )
 
-// IntArg is a string argument.
-type IntArg struct {
-	Bind     *int
+// Float64Arg is a float64 argument.
+type Float64Arg struct {
+	Bind     *float64
 	Name     string
 	Desc     string
 	Position int
 	Required bool
 
 	option ArgOption
-	value  *types.Int
+	value  *types.Float64
 }
 
-// String returns a string-formatted string value.
-func (a *IntArg) String() string {
+// String returns a string-formatted float64 value.
+func (a *Float64Arg) String() string {
 	return a.value.String()
 }
 
-// Set sets the string argument's value.
-func (a *IntArg) Set(s string) error {
+// Set sets the float64 argument's value.
+func (a *Float64Arg) Set(s string) error {
 	if err := a.value.Set(s); err != nil {
-		return errors.Wrapf(err, "setting %s as a string value for the %s argument", s, humanize.Ordinal(a.Position+1))
+		return errors.Wrapf(err, "setting %s as a float64 value for the %s argument", s, humanize.Ordinal(a.Position+1))
 	}
 
 	a.option.HasBeenSet = true
 	return nil
 }
 
-// Get gets the value of the string argument.
-func (a *IntArg) Get() int {
+// Get gets the value of the float64 argument.
+func (a *Float64Arg) Get() float64 {
 	return *a.Bind
 }
 
 // Type returns the type of the argument.
-func (a *IntArg) Type() types.Type {
-	return types.IntType
+func (a *Float64Arg) Type() types.Type {
+	return types.Float64Type
 }
 
 // Option returns the option for the arg.
-func (a *IntArg) Option() ArgOption {
+func (a *Float64Arg) Option() ArgOption {
 	return a.option
 }
 
 // Init initializes the default (or already set) options for the argument. Most
 // notably, it doesn't indicate that the argument has actually been set
 // yet. That's the job of the parser.
-func (a *IntArg) Init() error {
+func (a *Float64Arg) Init() error {
 	if a.value == nil {
-		a.value = types.NewInt(a.Bind, 0)
+		a.value = types.NewFloat64(a.Bind, 0.0)
 	}
 
 	a.option = ArgOption{

@@ -1,8 +1,6 @@
 package cli
 
 import (
-	"strconv"
-
 	"github.com/rdeusser/cli/internal/errors"
 	"github.com/rdeusser/cli/internal/humanize"
 	"github.com/rdeusser/cli/internal/types"
@@ -22,20 +20,16 @@ type BoolArg struct {
 
 // String returns a string-formatted bool value.
 func (a *BoolArg) String() string {
-	return strconv.FormatBool(*a.Bind)
+	return a.value.String()
 }
 
 // Set sets the bool argument's value.
 func (a *BoolArg) Set(s string) error {
-	if a.value == nil {
-		a.value = types.NewBool(a.Bind, false)
-	}
-
 	if err := a.value.Set(s); err != nil {
-		return errors.Wrapf(err, "setting %s as a bool value for the %s argument", s, humanize.Ordinal(a.Position))
+		return errors.Wrapf(err, "setting %s as a bool value for the %s argument", s, humanize.Ordinal(a.Position+1))
 	}
 
-	a.option.hasBeenSet = true
+	a.option.HasBeenSet = true
 	return nil
 }
 
@@ -54,23 +48,22 @@ func (a *BoolArg) Option() ArgOption {
 	return a.option
 }
 
-// Apply applies the default (or already set) options for the argument. Most
+// Init initializes the default (or already set) options for the argument. Most
 // notably, it doesn't indicate that the argument has actually been set
 // yet. That's the job of the parser.
-func (a *BoolArg) Apply() error {
+func (a *BoolArg) Init() error {
 	if a.value == nil {
 		a.value = types.NewBool(a.Bind, false)
 	}
 
 	a.option = ArgOption{
-		Bind:     a.Bind,
-		Name:     a.Name,
-		Desc:     a.Desc,
-		Position: a.Position,
-		Required: a.Required,
-
-		typ:        a.Type(),
-		hasBeenSet: false,
+		Bind:       a.Bind,
+		Name:       a.Name,
+		Desc:       a.Desc,
+		Position:   a.Position,
+		Required:   a.Required,
+		Type:       a.Type(),
+		HasBeenSet: false,
 	}
 
 	return nil

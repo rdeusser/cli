@@ -1,127 +1,72 @@
-package cli
+package cli_test
 
 import (
-	"bytes"
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/hexops/autogold"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/rdeusser/cli"
+	"github.com/rdeusser/cli/clitest"
 )
 
-type rootCommand struct{}
-
-func (rootCommand) Init() Command {
-	cmd := Command{
-		Name: "test",
-		Desc: "Test CLI",
-	}
-
-	cmd.AddCommands(
-		&serverCommand{},
-	)
-
-	return cmd
-}
-
-func (rootCommand) Run() error {
-	fmt.Fprintln(Output, "running from the root command")
-	return nil
-}
-
-type serverCommand struct{}
-
-func (serverCommand) Init() Command {
-	cmd := Command{
-		Name: "server",
-		Desc: "Runs a server for the test command (not really)",
-	}
-
-	cmd.AddCommands(
-		&serverStartCommand{},
-	)
-
-	return cmd
-}
-
-func (serverCommand) Run() error {
-	fmt.Fprintln(Output, "running from server subcommand")
-	return nil
-}
-
-type serverStartCommand struct{}
-
-func (serverStartCommand) Init() Command {
-	return Command{
-		Name: "start",
-		Desc: "Starts a server of some sort",
-	}
-}
-
-func (serverStartCommand) Run() error {
-	fmt.Fprintln(Output, "running from server start subcommand")
-	return nil
-}
-
 func TestCommand(t *testing.T) {
-	NoColor = true // autogold seems to have problems with color in golden files
-
-	tests := []struct {
+	testCases := []struct {
 		name string
 		args []string
 	}{
 		{
-			"Root Command Output",
-			[]string{""},
+			"Root command output",
+			nil,
 		},
 		{
-			"Root Command Help",
+			"Root command help",
 			[]string{"--help"},
 		},
 		{
-			"Server Subcommand Output",
-			[]string{"server"},
-		},
-		{
-			"Server Subcommand Help",
-			[]string{"server", "--help"},
-		},
-		{
-			"Server Start Subcommand Output",
+			"Server start subcommand output",
 			[]string{"server", "start"},
 		},
 		{
-			"Server Start Subcommand Help",
+			"Server start subcommand help",
 			[]string{"server", "start", "--help"},
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			var (
-				err    error
-				runner rootCommand
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			rootCommand := clitest.NewCommand(cli.Command{
+				Name: "test",
+				Desc: "A test binary",
+			}, nil)
+
+			serverCommand := clitest.NewCommand(cli.Command{
+				Name: "server",
+				Desc: "Do something with a test server",
+			}, nil)
+
+			startCommand := clitest.NewCommand(cli.Command{
+				Name: "start",
+				Desc: "Starts a test server",
+			}, func() error {
+				fmt.Fprintln(rootCommand.Output(), "running from server start subcommand")
+				return nil
+			})
+
+			serverCommand.AddCommands(
+				startCommand,
 			)
 
-			cmd := runner.Init()
+			rootCommand.AddCommands(
+				serverCommand,
+			)
 
-			var buf bytes.Buffer
-			Output = &buf
-
-			oldArgs := os.Args
-			defer func() {
-				os.Args = oldArgs
-			}()
-
-			os.Args = []string{""}
-			os.Args = append(os.Args, cmd.Name)
-			os.Args = append(os.Args, tt.args...)
-
-			cmd, err = Run(&rootCommand{})
+			output, err := clitest.Run(rootCommand, tc.args...)
 			assert.NoError(t, err)
+			assert.NotEmpty(t, output)
 
-			autogold.Equal(t, autogold.Raw(buf.String()))
+			autogold.Equal(t, autogold.Raw(output))
 		})
 	}
 }

@@ -1,100 +1,95 @@
-package cli
+package cli_test
 
 import (
-	"bytes"
-	"os"
-	"strconv"
 	"testing"
 
 	"github.com/hexops/autogold"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/rdeusser/cli/internal/types"
+	"github.com/rdeusser/cli"
+	"github.com/rdeusser/cli/clitest"
 )
 
-var boolFlag = &BoolFlag{
-	Name:      "test",
-	Shorthand: "t",
-	Desc:      "run tests",
-	Default:   false,
-	Required:  true,
-}
-
-type boolCommand struct{}
-
-func (boolCommand) Init() Command {
-	return Command{
-		Name: "test",
-		Desc: "test setting a bool flag",
-		Flags: []Flag{
-			boolFlag,
-		},
-	}
-}
-
-func (boolCommand) Run() error {
-	return nil
-}
-
 func TestBoolFlag(t *testing.T) {
-	NoColor = true // autogold seems to have problems with color in golden files
-
-	tests := []struct {
+	testCases := []struct {
 		name     string
+		bind     bool
+		envVar   string
 		args     []string
 		expected bool
 	}{
 		{
-			"Help Output",
+			"Help output",
+			clitest.Bool(false),
+			"",
 			[]string{"--help"},
 			false,
 		},
 		{
-			"Default Value",
-			[]string{""},
+			"Default value (false)",
+			clitest.Bool(false),
+			"",
+			nil,
 			false,
 		},
 		{
-			"Set Value Using Shorthand",
+			"Default value (true)",
+			clitest.Bool(true),
+			"",
+			nil,
+			true,
+		},
+		{
+			"Default value (envvar)",
+			clitest.Bool(false),
+			"TEST",
+			nil,
+			true,
+		},
+		{
+			"Set value using shorthand",
+			clitest.Bool(false),
+			"",
 			[]string{"-t"},
 			true,
 		},
 		{
-			"Set Value Using Name",
+			"Set value using name",
+			clitest.Bool(false),
+			"",
 			[]string{"--test"},
 			true,
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			var (
-				err    error
-				runner boolCommand
-			)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			flag := &cli.BoolFlag{
+				Bind:      &tc.bind,
+				Name:      "test",
+				Shorthand: "t",
+				Desc:      "test flag",
+				Default:   tc.bind,
+			}
 
-			cmd := runner.Init()
+			if tc.envVar != "" {
+				flag.EnvVar = tc.envVar
+			}
 
-			var buf bytes.Buffer
-			Output = &buf
+			cmd := clitest.NewCommand(cli.Command{
+				Name: "test-bool-flag",
+				Desc: "Test bool flag",
+				Flags: cli.Flags{
+					flag,
+				},
+			}, nil)
 
-			oldArgs := os.Args
-			defer func() {
-				os.Args = oldArgs
-			}()
-
-			os.Args = []string{}
-			os.Args = append(os.Args, cmd.Name)
-			os.Args = append(os.Args, tt.args...)
-
-			cmd, err = Run(&boolCommand{})
+			output, err := clitest.Run(cmd, tc.args...)
 			assert.NoError(t, err)
 
-			assert.Equal(t, types.BoolType, boolFlag.Type())
-			assert.Equal(t, tt.expected, boolFlag.Get())
-			assert.Equal(t, strconv.FormatBool(tt.expected), boolFlag.String())
+			assert.Equal(t, tc.expected, *flag.Bind)
 
-			autogold.Equal(t, autogold.Raw(buf.String()))
+			autogold.Equal(t, autogold.Raw(output))
 		})
 	}
 }

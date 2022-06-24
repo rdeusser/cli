@@ -32,7 +32,7 @@ type Arg interface {
 	types.Getter
 	ArgOptionGetter
 
-	Apply() error
+	Init() error
 }
 
 // ArgOption represents all possible underlying argument type.
@@ -52,35 +52,30 @@ type ArgOption struct {
 	Position int
 
 	// Separator is the separator to use when providing multiple arguments
-	// for the same variable or field (i.e. a slice).
+	// (i.e. a slice).
 	Separator string
 
 	// Required indicates whether this argument is required.
 	Required bool
 
-	// typ represents the underlying argument type.
-	typ types.Type
+	// Type represents the underlying argument type.
+	Type types.Type
 
-	// hasBeenSet indicates whether or not the arg was set explicitly.
+	// HasBeenSet indicates whether or not the arg was set explicitly.
 	//
 	// The purpose of this field is to distinguish between a default value
 	// and when an arg was explicitly set.
-	hasBeenSet bool
+	HasBeenSet bool
 }
 
-// Type returns the type of the arg.
-func (o ArgOption) Type() types.Type {
-	return o.typ
+// String returns the name of the arg.
+func (ao ArgOption) String() string {
+	return ao.Name
 }
 
-// HasBeenSet indicates if the argument was provided to the command.
-func (o ArgOption) HasBeenSet() bool {
-	return o.hasBeenSet
-}
+// SortArgOptionsByPosition sorts args by position.
+type SortArgOptionsByPosition []ArgOption
 
-// SortArgOptionsByName sorts args by name.
-type SortArgOptionsByName []ArgOption
-
-func (n SortArgOptionsByName) Len() int           { return len(n) }
-func (n SortArgOptionsByName) Swap(i, j int)      { n[i], n[j] = n[j], n[i] }
-func (n SortArgOptionsByName) Less(i, j int) bool { return n[i].Name < n[j].Name }
+func (n SortArgOptionsByPosition) Len() int           { return len(n) }
+func (n SortArgOptionsByPosition) Swap(i, j int)      { n[i], n[j] = n[j], n[i] }
+func (n SortArgOptionsByPosition) Less(i, j int) bool { return n[i].Position < n[j].Position }

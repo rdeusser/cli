@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"os"
 
 	"github.com/rdeusser/cli"
 	"github.com/rdeusser/cli/examples/minimal/app"
@@ -27,7 +28,7 @@ func (Minimal) Run() error {
 }
 
 func main() {
-	if _, err := cli.Run(&Minimal{}); err != nil {
+	if err := cli.Run(os.Args, &Minimal{}); err != nil {
 		log.Fatal(err)
 	}
 }

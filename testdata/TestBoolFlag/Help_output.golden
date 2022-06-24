@@ -1,0 +1,11 @@
+Test bool flag
+
+[33mUSAGE:[0m
+    test-bool-flag [flags]
+
+[33mFLAGS:[0m
+    [32m-h[0m, [32m--help[0m        Print help information
+    [32m-t[0m, [32m--test[0m        test flag
+    [32m-V[0m, [32m--version[0m     Print version information
+
+Use "test-bool-flag --help" for more information about a command.

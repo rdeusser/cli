@@ -29,10 +29,6 @@ func (f *StringFlag) String() string {
 
 // Set sets the string flag's value.
 func (f *StringFlag) Set(s string) error {
-	if f.value == nil {
-		f.value = types.NewString(nil, f.Default)
-	}
-
 	if len(f.Shorthand) > 1 {
 		return ErrInvalidShorthand
 	}
@@ -44,7 +40,7 @@ func (f *StringFlag) Set(s string) error {
 		}
 	}
 
-	f.option.hasBeenSet = true
+	f.option.HasBeenSet = true
 	return nil
 }
 
@@ -63,25 +59,24 @@ func (f *StringFlag) Option() FlagOption {
 	return f.option
 }
 
-// Apply applies the default (or already set) options for the flag. Most
-// notably, it doesn't indicate that the flag has actually been set
-// yet. That's the job of the parser.
-func (f *StringFlag) Apply() error {
+// Init initializes the default (or already set) options for the flag. Most
+// notably, it doesn't indicate that the flag has actually been set yet. That's
+// the job of the parser.
+func (f *StringFlag) Init() error {
 	if f.value == nil {
 		f.value = types.NewString(f.Bind, f.Default)
 	}
 
 	f.option = FlagOption{
-		Bind:      f.Bind,
-		Name:      f.Name,
-		Shorthand: f.Shorthand,
-		Desc:      f.Desc,
-		EnvVar:    f.EnvVar,
-		Default:   f.value.String(),
-		Required:  f.Required,
-
-		typ:        f.Type(),
-		hasBeenSet: false,
+		Bind:       f.Bind,
+		Name:       f.Name,
+		Shorthand:  f.Shorthand,
+		Desc:       f.Desc,
+		EnvVar:     f.EnvVar,
+		Default:    f.value.String(),
+		Required:   f.Required,
+		Type:       f.Type(),
+		HasBeenSet: false,
 	}
 
 	return nil

@@ -3,32 +3,33 @@ package cli
 import (
 	"os"
 	"strings"
+	"time"
 
 	"github.com/rdeusser/cli/internal/errors"
 	"github.com/rdeusser/cli/internal/types"
 )
 
-// BoolFlag is a bool flag.
-type BoolFlag struct {
-	Bind      *bool
+// DurationFlag is a duration flag.
+type DurationFlag struct {
+	Bind      *time.Duration
 	Name      string
 	Shorthand string
 	Desc      string
-	Default   bool
+	Default   time.Duration
 	EnvVar    string
 	Required  bool
 
 	option FlagOption
-	value  *types.Bool
+	value  *types.Duration
 }
 
-// String returns a string-formatted bool value.
-func (f *BoolFlag) String() string {
+// String returns a string-formatted duration value.
+func (f *DurationFlag) String() string {
 	return f.value.String()
 }
 
-// Set sets the bool flag's value.
-func (f *BoolFlag) Set(s string) error {
+// Set sets the duration flag's value.
+func (f *DurationFlag) Set(s string) error {
 	if len(f.Shorthand) > 1 {
 		return ErrInvalidShorthand
 	}
@@ -36,39 +37,39 @@ func (f *BoolFlag) Set(s string) error {
 	envVar := strings.TrimSpace(f.EnvVar)
 	if v, ok := os.LookupEnv(envVar); ok {
 		if err := f.value.Set(v); err != nil {
-			return errors.Wrapf(err, "setting %s as a bool value for the %s flag", v, f.Name)
+			return errors.Wrapf(err, "setting %s as a duration value for the %s flag", v, f.Name)
 		}
 	}
 
 	if err := f.value.Set(s); err != nil {
-		return errors.Wrapf(err, "setting %s as a bool value for the %s flag", s, f.Name)
+		return errors.Wrapf(err, "setting %s as a duration value for the %s flag", s, f.Name)
 	}
 
 	f.option.HasBeenSet = true
 	return nil
 }
 
-// Get gets the value of the bool flag.
-func (f *BoolFlag) Get() bool {
+// Get gets the value of the duration flag.
+func (f *DurationFlag) Get() time.Duration {
 	return f.value.Get()
 }
 
 // Type returns the type of the flag.
-func (f *BoolFlag) Type() types.Type {
-	return types.BoolType
+func (f *DurationFlag) Type() types.Type {
+	return types.DurationType
 }
 
 // Option returns the option for the flag.
-func (f *BoolFlag) Option() FlagOption {
+func (f *DurationFlag) Option() FlagOption {
 	return f.option
 }
 
 // Init initializes the default (or already set) options for the flag. Most
 // notably, it doesn't indicate that the flag has actually been set yet. That's
 // the job of the parser.
-func (f *BoolFlag) Init() error {
+func (f *DurationFlag) Init() error {
 	if f.value == nil {
-		f.value = types.NewBool(f.Bind, f.Default)
+		f.value = types.NewDuration(f.Bind, f.Default)
 	}
 
 	f.option = FlagOption{

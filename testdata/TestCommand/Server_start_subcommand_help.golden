@@ -1,0 +1,10 @@
+Starts a test server
+
+[33mUSAGE:[0m
+    start server [flags]
+
+[33mFLAGS:[0m
+    [32m-h[0m, [32m--help[0m        Print help information
+    [32m-V[0m, [32m--version[0m     Print version information
+
+Use "start server --help" for more information about a command.

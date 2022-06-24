@@ -42,24 +42,18 @@ func (w *withMessage) Format(f fmt.State, verb rune) {
 	}
 }
 
-// Is wraps the standard library's As function to avoid name collisions in
-// downstream packages.
-func Is(err, target error) bool {
-	return errors.Is(err, target)
-}
-
 // As wraps the standard library's As function to avoid name collisions.
 func As(err error, target interface{}) bool {
 	return errors.As(err, target)
 }
 
-// Perhaps is functionally the same as Is, but instead looks through the entire
-// chain of errors and strings to find target (if it can).
+// Is is functionally the same as errors.Is, but instead looks through the
+// entire chain of errors and strings to find target (if it can).
 //
 // Target does not need to implement the error type. Some packages will just
 // return an `fmt.Errorf` or `errors.New` and that makes it impossible to check
-// normally.
-func Perhaps(err error, target interface{}) bool {
+// normally. Here you can just pas
+func Is(err error, target interface{}) bool {
 	if target == nil {
 		return err == target
 	}
@@ -71,7 +65,7 @@ func Perhaps(err error, target interface{}) bool {
 			return true
 		}
 
-		return Perhaps(err, terr.err)
+		return Is(err, terr.err)
 	}
 
 	// If we've gone through all the `withMessage` error types, check to see
@@ -85,12 +79,12 @@ func Perhaps(err error, target interface{}) bool {
 		// If the error still doesn't match, attempt to unwrap the error
 		// and check that.
 		if uerr := errors.Unwrap(terr); uerr != nil {
-			return Perhaps(err, uerr)
+			return Is(err, uerr)
 		}
 
 		// If target doesn't match our error and we can't unwrap it
 		// anymore return the error string and check that.
-		return Perhaps(err, terr.Error())
+		return Is(err, terr.Error())
 	}
 
 	// Finally, if the error string matches the target string return
@@ -124,6 +118,6 @@ func Wrap(err error, msg string) error {
 func Wrapf(err error, format string, args ...interface{}) error {
 	return &withMessage{
 		err: err,
-		msg: fmt.Sprint(format, args),
+		msg: fmt.Sprintf(format, args...),
 	}
 }

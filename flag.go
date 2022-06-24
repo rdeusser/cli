@@ -8,13 +8,13 @@ var (
 	HelpFlag = BoolFlag{
 		Name:      "help",
 		Shorthand: "h",
-		Desc:      "show help",
+		Desc:      "Print help information",
 	}
 
 	VersionFlag = BoolFlag{
 		Name:      "version",
 		Shorthand: "V",
-		Desc:      "print the version",
+		Desc:      "Print version information",
 	}
 )
 
@@ -32,7 +32,11 @@ func (f *Flags) Lookup(shorthand, name string) Flag {
 	for _, flag := range *f {
 		option := flag.Option()
 
-		if option.Shorthand == shorthand || option.Name == name {
+		if option.Name == name {
+			return flag
+		}
+
+		if option.Shorthand == name {
 			return flag
 		}
 	}
@@ -46,7 +50,7 @@ type Flag interface {
 	types.Getter
 	FlagOptionGetter
 
-	Apply() error
+	Init() error
 }
 
 // FlagOption represents all possible underlying flag types.
@@ -71,27 +75,26 @@ type FlagOption struct {
 	// itself wasn't provided.
 	EnvVar string
 
+	// Separator is the separator to use when providing multiple arguments
+	// to a flag (i.e. a slice).
+	Separator string
+
 	// Required indicates whether this flag is required.
 	Required bool
 
-	// typ represents the underlying flag type.
-	typ types.Type
+	// Type represents the underlying flag type.
+	Type types.Type
 
-	// hasBeenSet indicates whether or not the flag was set explicitly.
+	// HasBeenSet indicates whether or not the flag was set explicitly.
 	//
 	// The purpose of this field is to distinguish between a default value
 	// and when an flag was explicitly set.
-	hasBeenSet bool
+	HasBeenSet bool
 }
 
-// Type returns the type of the flag.
-func (o FlagOption) Type() types.Type {
-	return o.typ
-}
-
-// HasBeenSet indicates if the flag has been set.
-func (o FlagOption) HasBeenSet() bool {
-	return o.hasBeenSet
+// String returns the name of the flag.
+func (fo FlagOption) String() string {
+	return fo.Name
 }
 
 // SortFlagOptionsByName sorts flags by name.

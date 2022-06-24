@@ -4,6 +4,8 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
+
+	"github.com/rdeusser/cli/internal/termenv"
 )
 
 var (
@@ -25,12 +27,12 @@ type ErrFlagAlreadyDefined struct {
 // the command.
 func (e ErrFlagAlreadyDefined) Error() string {
 	if e.option == nil {
-		return colorize(ColorRed, "flag already defined, but is nil")
+		return termenv.Colorize(termenv.ColorRed, "flag already defined, but is nil")
 	}
 
 	option := e.option.Option()
 
-	return fmt.Sprintf("%s %v", colorize(ColorRed, "flag (type %s) already defined:", option.Type()), option.Name)
+	return fmt.Sprintf("%s %v", termenv.Colorize(termenv.ColorRed, "flag (type %s) already defined:", option.Type), option.Name)
 }
 
 // ErrFlagNotDefined is when you attempt to pass a flag to the command that was
@@ -42,7 +44,7 @@ type ErrFlagNotDefined struct {
 // Error returns an error string of which flag was passed to the command, but
 // not added to it before the parsing stage.
 func (e ErrFlagNotDefined) Error() string {
-	return fmt.Sprintf("* %s %v\n", colorize(ColorRed, "flag provided but not defined:"), e.flag)
+	return fmt.Sprintf("* %s %v\n", termenv.Colorize(termenv.ColorRed, "flag provided but not defined:"), e.flag)
 }
 
 // ErrArgAlreadyDefined is when you attempt to add an argument to a command that
@@ -58,12 +60,12 @@ type ErrArgAlreadyDefined struct {
 // within the command that was already defined.
 func (e ErrArgAlreadyDefined) Error() string {
 	if e.option == nil {
-		return colorize(ColorRed, "arg already defined, but is nil")
+		return termenv.Colorize(termenv.ColorRed, "arg already defined, but is nil")
 	}
 
 	option := e.option.Option()
 
-	return fmt.Sprintf("%s %v", colorize(ColorRed, "arg (position %d, type %s) already defined:", option.Position, option.Type()), option.Name)
+	return fmt.Sprintf("%s %v", termenv.Colorize(termenv.ColorRed, "arg (position %d, type %s) already defined:", option.Position, option.Type), option.Name)
 }
 
 // ErrArgNotDefined is when you attempt to pass an argument to a command that
@@ -76,5 +78,5 @@ type ErrArgNotDefined struct {
 // Error returns an error string of what argument you passed to the command, but
 // did not add to the command itself.
 func (e ErrArgNotDefined) Error() string {
-	return fmt.Sprintf("* %s %v\n", colorize(ColorRed, "arg (position %d) provided but not defined:", e.position), e.arg)
+	return fmt.Sprintf("* %s %v\n", termenv.Colorize(termenv.ColorRed, "arg (position %d) provided but not defined:", e.position), e.arg)
 }
