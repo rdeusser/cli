@@ -21,6 +21,8 @@ func (cmd *CreateCommand) Init() cli.Command {
 				Name:      "test",
 				Shorthand: "t",
 				Desc:      "Create a test server",
+				Default:   false,
+				EnvVar:    "TEST",
 				Required:  false,
 			},
 		},
@@ -37,7 +39,7 @@ func (cmd *CreateCommand) Init() cli.Command {
 
 func (cmd *CreateCommand) Run() error {
 	fmt.Println("running from the create command")
-	fmt.Println(cmd.Test)
-	fmt.Println(cmd.Server)
+	fmt.Println("test:   ", cmd.Test)
+	fmt.Println("server: ", cmd.Server)
 	return nil
 }

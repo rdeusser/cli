@@ -73,16 +73,15 @@ func (f *StringSliceFlag) Init() error {
 	}
 
 	f.option = FlagOption{
-		Bind:       f.Bind,
-		Name:       f.Name,
-		Shorthand:  f.Shorthand,
-		Desc:       f.Desc,
-		Default:    f.value.String(),
-		EnvVar:     f.EnvVar,
-		Separator:  f.Separator,
-		Required:   f.Required,
-		Type:       f.Type(),
-		HasBeenSet: false,
+		Bind:      f.Bind,
+		Name:      f.Name,
+		Shorthand: f.Shorthand,
+		Desc:      f.Desc,
+		Default:   f.value.String(),
+		EnvVar:    f.EnvVar,
+		Separator: f.Separator,
+		Required:  f.Required,
+		Type:      f.Type(),
 	}
 
 	return nil

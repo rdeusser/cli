@@ -68,15 +68,14 @@ func (f *StringFlag) Init() error {
 	}
 
 	f.option = FlagOption{
-		Bind:       f.Bind,
-		Name:       f.Name,
-		Shorthand:  f.Shorthand,
-		Desc:       f.Desc,
-		EnvVar:     f.EnvVar,
-		Default:    f.value.String(),
-		Required:   f.Required,
-		Type:       f.Type(),
-		HasBeenSet: false,
+		Bind:      f.Bind,
+		Name:      f.Name,
+		Shorthand: f.Shorthand,
+		Desc:      f.Desc,
+		EnvVar:    f.EnvVar,
+		Default:   f.value.String(),
+		Required:  f.Required,
+		Type:      f.Type(),
 	}
 
 	return nil

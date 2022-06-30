@@ -57,13 +57,12 @@ func (a *Float64Arg) Init() error {
 	}
 
 	a.option = ArgOption{
-		Bind:       a.Bind,
-		Name:       a.Name,
-		Desc:       a.Desc,
-		Position:   a.Position,
-		Required:   a.Required,
-		Type:       a.Type(),
-		HasBeenSet: false,
+		Bind:     a.Bind,
+		Name:     a.Name,
+		Desc:     a.Desc,
+		Position: a.Position,
+		Required: a.Required,
+		Type:     a.Type(),
 	}
 
 	return nil

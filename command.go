@@ -439,7 +439,6 @@ func (c *Command) parseArgs(args []string) error {
 func (c *Command) parseUsage() {
 	for _, cmd := range c.commands {
 		maxLen := findMaxCommandLength(c.commands)
-
 		c.commandUsage += fmt.Sprintf("    %s%s\n", rpad(termenv.Colorize(termenv.ColorGreen, cmd.Name), computePadding(maxLen, cmd.Name)), cmd.Desc)
 	}
 
@@ -464,7 +463,6 @@ func (c *Command) parseUsage() {
 		}
 
 		usage := arg.Desc
-
 		c.argUsage += fmt.Sprintf("    %s %s (type: %s)\n\n", name, usage, arg.Type)
 	}
 }
@@ -525,7 +523,15 @@ func (c *Command) addFlag(flag Flag) error {
 		return errors.Wrap(err, "applying flag")
 	}
 
-	c.flagOptions = append(c.flagOptions, flag.Option())
+	option := flag.Option()
+	env, ok := os.LookupEnv(option.EnvVar)
+	if ok {
+		if err := flag.Set(env); err != nil {
+			return errors.Wrap(err, "setting flag via environment variable")
+		}
+	}
+
+	c.flagOptions = append(c.flagOptions, option)
 	return nil
 }
 

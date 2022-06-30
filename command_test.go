@@ -50,7 +50,7 @@ func TestCommand(t *testing.T) {
 				Name: "start",
 				Desc: "Starts a test server",
 			}, func() error {
-				fmt.Fprintln(rootCommand.Output(), "running from server start subcommand")
+				fmt.Fprintln(clitest.Output, "running from server start subcommand")
 				return nil
 			})
 

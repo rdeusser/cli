@@ -1,6 +1,8 @@
 package cli_test
 
 import (
+	"fmt"
+	"os"
 	"testing"
 
 	"github.com/hexops/autogold"
@@ -74,6 +76,7 @@ func TestBoolFlag(t *testing.T) {
 
 			if tc.envVar != "" {
 				flag.EnvVar = tc.envVar
+				os.Setenv(flag.EnvVar, "true")
 			}
 
 			cmd := clitest.NewCommand(cli.Command{
@@ -82,11 +85,13 @@ func TestBoolFlag(t *testing.T) {
 				Flags: cli.Flags{
 					flag,
 				},
-			}, nil)
+			}, func() error {
+				fmt.Fprintln(clitest.Output, flag.String())
+				return nil
+			})
 
 			output, err := clitest.Run(cmd, tc.args...)
 			assert.NoError(t, err)
-
 			assert.Equal(t, tc.expected, *flag.Bind)
 
 			autogold.Equal(t, autogold.Raw(output))

@@ -8,6 +8,8 @@ import (
 	"github.com/rdeusser/cli/internal/types"
 )
 
+var Output = new(bytes.Buffer)
+
 // Bool returns a bool to bind flags/args to.
 func Bool(v bool) bool {
 	return types.NewBool(nil, v).Get()
@@ -40,15 +42,15 @@ func StringSlice(v []string) []string {
 
 // Run runs the test command.
 func Run(cmd *Command, args ...string) (string, error) {
-	var buf bytes.Buffer
+	defer Output.Reset()
 
-	cmd.SetOutput(&buf)
+	cmd.SetOutput(Output)
 
 	if err := cli.Run(makeArgs(cmd, args...), cmd); err != nil {
 		return "", err
 	}
 
-	return buf.String(), nil
+	return Output.String(), nil
 }
 
 // makeArgs returns a slice of arguments constructed from the full name of the

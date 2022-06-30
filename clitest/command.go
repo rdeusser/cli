@@ -50,11 +50,6 @@ func (c *Command) AddCommands(commands ...*Command) {
 	}
 }
 
-// Output returns the output set by the command.
-func (c *Command) Output() io.Writer {
-	return c.cmd.Output()
-}
-
 // SetOutput sets the output used by the commmand.
 func (c *Command) SetOutput(w io.Writer) {
 	c.cmd.SetOutput(w)
