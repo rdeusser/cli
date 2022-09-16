@@ -16,7 +16,7 @@ var (
 	//
 	// Version must conform to the format expected by
 	// github.com/hashicorp/go-version for tests to work.
-	Version = "0.13.0"
+	Version = "1.0.0"
 
 	// VersionPrerelease is a pre-release marker for the version. If this is
 	// "" (empty string) then it means that that this is a final
