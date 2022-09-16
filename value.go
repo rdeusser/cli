@@ -623,7 +623,11 @@ func isZeroValue[T any](value T) bool {
 		return v == *new(url.URL)
 	case Path:
 		return v == *new(Path)
-	default:
-		return false
 	}
+
+	if trimBrackets(value) == "" {
+		return true
+	}
+
+	return false
 }

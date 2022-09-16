@@ -225,7 +225,11 @@ func (c *Command) parseCommands(args []string) error {
 		return c.errOrPrintHelp(err)
 	}
 
-	if c.optionSetter != nil && c.parent != nil {
+	if c.optionSetter != nil {
+		if c.parent == nil {
+			return ErrMustHaveParent
+		}
+
 		if err := c.optionSetter.SetOptions(c.parent.Flags); err != nil {
 			return c.errOrPrintHelp(err)
 		}
@@ -341,6 +345,8 @@ func (c *Command) setRunners(runner Runner) {
 	}
 }
 
+// parseArgs sets the values for flags and arguments, checks for unknown
+// arguments, and that all required flags and arguments have been set.
 func (c *Command) parseArgs(args []string) error {
 	if err := c.setValues(args); err != nil {
 		return err
@@ -433,18 +439,11 @@ func (c *Command) checkUnknown(args []string) error {
 			seen[name] = struct{}{}
 		}
 
-		// If the flag type is a slice, we have to remove the brackets that
-		// fmt.Sprint will add, and rejoin the string with the flags separator.
-		s := join.WithSeparator(trimBrackets(flag), opt.Separator)
-		seen[s] = struct{}{}
+		seen[flag.String()] = struct{}{}
 	}
 
 	for _, arg := range c.Args {
-		// If the arg type is a slice, we have to remove the brackets that
-		// fmt.Sprint will add.
-		for _, s := range strings.Split(trimBrackets(arg), " ") {
-			seen[s] = struct{}{}
-		}
+		seen[arg.String()] = struct{}{}
 	}
 
 	for _, arg := range args {

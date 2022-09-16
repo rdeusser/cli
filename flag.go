@@ -3,6 +3,8 @@ package cli
 import (
 	"fmt"
 	"strings"
+
+	"github.com/rdeusser/cli/internal/join"
 )
 
 var HelpFlag = &Flag[bool]{
@@ -38,6 +40,7 @@ type Flag[T Value] struct {
 	EnvVar    EnvVar[T]
 	Required  bool
 
+	isSlice    bool
 	hasBeenSet bool
 }
 
@@ -80,6 +83,7 @@ func (f *Flag[T]) Set(s string) error {
 	}
 
 	*f.Value = value
+	f.isSlice = strings.HasPrefix(fmt.Sprint(value), "[")
 	f.hasBeenSet = true
 
 	return nil
@@ -91,7 +95,9 @@ func (f *Flag[T]) String() string {
 		return ""
 	}
 
-	return fmt.Sprint(*f.Value)
+	// If the flag type is a slice, we have to remove the brackets that
+	// fmt.Sprint will add, and rejoin the string with the flags separator.
+	return join.WithSeparator(trimBrackets(*f.Value), f.Separator)
 }
 
 // Options returns the common Options available to both flags and arguments.
@@ -101,13 +107,8 @@ func (f *Flag[T]) Options() Options {
 		f.Default = t
 	}
 
-	isSlice := false
-	if strings.HasPrefix(f.String(), "[") {
-		isSlice = true
-	}
-
 	return Options{
-		IsSlice:    isSlice,
+		IsSlice:    f.isSlice,
 		Name:       f.Name,
 		Shorthand:  f.Shorthand,
 		Desc:       f.Desc,

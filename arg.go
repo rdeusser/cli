@@ -29,6 +29,7 @@ type Arg[T Value] struct {
 	Value    *T
 	Required bool
 
+	isSlice    bool
 	hasBeenSet bool
 }
 
@@ -49,6 +50,7 @@ func (a *Arg[T]) Set(s string) error {
 	}
 
 	*a.Value = value
+	a.isSlice = strings.HasPrefix(fmt.Sprint(value), "[")
 	a.hasBeenSet = true
 
 	return nil
@@ -60,20 +62,17 @@ func (a *Arg[T]) String() string {
 		return ""
 	}
 
-	return fmt.Sprint(*a.Value)
+	// If the arg type is a slice, we have to remove the brackets that
+	// fmt.Sprint will add.
+	return trimBrackets(*a.Value)
 }
 
 // Options returns the common Options available to both flags and arguments.
 func (a *Arg[T]) Options() Options {
 	t := *new(T)
 
-	isSlice := false
-	if strings.HasPrefix(a.String(), "[") {
-		isSlice = true
-	}
-
 	return Options{
-		IsSlice:    isSlice,
+		IsSlice:    a.isSlice,
 		Name:       a.Name,
 		Desc:       a.Desc,
 		Layout:     a.Layout,

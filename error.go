@@ -22,6 +22,10 @@ var (
 	// ErrFlagSliceMustHaveSeparator indicates that a separator was not set on a
 	// flag or is "".
 	ErrFlagSliceMustHaveSeparator = errors.New("flag must have a separator if value is a slice")
+
+	// ErrMustHaveParent indicates that an OptionSetter was given to a command
+	// that doesn't have a parent (e.g. root command).
+	ErrMustHaveParent = errors.New("command must have parent in order to use SetOptions")
 )
 
 // ErrFlagAlreadyDefined is when you attempt to add a flag that has already been
