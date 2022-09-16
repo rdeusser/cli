@@ -1,54 +1,35 @@
 package cli
 
 import (
-	"errors"
 	"fmt"
+	"io"
 	"os"
 	"sort"
 	"strings"
+	"unicode"
 
-	"github.com/hashicorp/go-multierror"
-	"github.com/mattn/go-colorable"
+	"github.com/rdeusser/cli/ast"
+	"github.com/rdeusser/cli/help"
+	"github.com/rdeusser/cli/internal/errors"
+	"github.com/rdeusser/cli/internal/join"
+	"github.com/rdeusser/cli/internal/multierror"
+	"github.com/rdeusser/cli/internal/slice"
+	"github.com/rdeusser/cli/parser"
+	"github.com/rdeusser/cli/tablewriter"
 )
 
-var Output = colorable.NewColorableStdout()
+type VisitOption int
 
-type Runner interface {
-	Init() Command
-	Run([]string) error
-}
+const (
+	VisitStartingAtChild VisitOption = iota
+	VisitStartingAtParent
+	VisitStartingAtChildReverse
+)
 
-func Run(runner Runner) (Command, error) {
-	cmd := runner.Init()
+type VisitFunc func(*Command) error
 
-	ProjectName = cmd.Name
-
-	if cmd.commands == nil {
-		cmd.commands = make([]*Command, 0)
-	}
-
-	if cmd.runners == nil {
-		cmd.runners = make(map[string]Runner)
-	}
-
-	if cmd.Version == "" {
-		cmd.Version = "dev"
-	}
-
-	cmd.runner = runner
-	cmd.runners[cmd.Name] = runner
-
-	if err := cmd.parseCommands(cmd.Name, os.Args[1:]); err != nil {
-		if errors.Is(err, ErrPrintHelp) {
-			return cmd, nil
-		}
-
-		return cmd, err
-	}
-
-	return cmd, nil
-}
-
+// Command is a command. How else are you supposed to describe this?
+// e.g. `go run main.go`
 type Command struct {
 	// Name is the name of the command.
 	Name string
@@ -59,356 +40,641 @@ type Command struct {
 	// LongDesc is the long description of the command.
 	LongDesc string
 
-	// Version is the version of the command.
-	Version string
-
 	// Flags is the full set of flags passed to the command.
-	Flags []Flag
+	Flags Flags
 
-	// actual is the full set of flags passed to the command.
-	actual map[Option]Flag
+	// Args is the arguments passed to the command after flags have been
+	// processed.
+	Args Args
 
-	// formal is the full set of flags represented as options.
-	formal []Option
+	// parent of the current command.
+	parent *Command
 
-	// args is the full set of arguments passed to the command.
-	// args []Option
+	// commands is a map of command names to the commands command.
+	commands map[string]*Command
 
-	// commands is a list of commands.
-	commands []*Command
+	// The order for the below setters and runners is as follows:
+	// 1. OptionSetter
+	// 2. PersistentPreRunner
+	// 3. PreRunner
+	// 4. Runner
+	// 5. PostRunner
+	// 6. PersistentPostRunner
 
-	// runners is a list of commands that satisfies the Runner interface.
-	runners map[string]Runner
+	// optionSetter sets options from parent commands.
+	optionSetter OptionSetter
+
+	// persistentPreRunner is inherited and run by all children of this command
+	// before all other runners.
+	persistentPreRunner PersistentPreRunner
+
+	// preRunner is run before the main runner.
+	preRunner PreRunner
 
 	// runner is the runner for the current command.
 	runner Runner
 
-	// parent is the parent command for this command.
-	parent *Command
+	// postRunner is run after the main runner.
+	postRunner PostRunner
 
-	// flagUsage is the combined usage of all flags for the command.
-	flagUsage string
+	// persistentPostRunner is inherited and run by all children of this command
+	// after all other runners.
+	persistentPostRunner PersistentPostRunner
 
-	// commandUsage is the combined usage of all commands for the command.
-	commandUsage string
+	// stmt is the parsed statement.
+	stmt *ast.Statement
 
-	// fullName is the combined names of the root command and it's subcommands, if applicable.
-	fullName string
+	// usage is the combined usage of commands, flags, and arguments.
+	usage string
+
+	// output is where help and errors are written to.
+	output io.Writer
 }
 
-func (c *Command) HasAvailableFlags() bool {
-	return len(c.Flags) != 0
-}
-
-func (c *Command) HasAvailableCommands() bool {
-	return len(c.commands) != 0
-}
-
-func (c *Command) HasParent() bool {
-	return c.parent != nil
-}
-
-func (c *Command) CommandHelp() string {
-	return c.commandUsage
-}
-
-func (c *Command) FlagHelp() string {
-	return c.flagUsage
-}
-
-// FullName returns the full name of the command (e.g. test server start).
-func (c *Command) FullName() string {
-	if c.fullName == "" {
-		return c.Name
-	}
-	return c.fullName
-}
-
+// AddCommands adds commands to the current command as children.
 func (c *Command) AddCommands(runners ...Runner) {
-	if c.commands == nil {
-		c.commands = make([]*Command, 0)
-	}
-
-	if c.runners == nil {
-		c.runners = make(map[string]Runner)
-	}
+	c.init()
 
 	for _, runner := range runners {
 		cmd := runner.Init()
-		c.commands = append(c.commands, &cmd)
-		c.runners[cmd.Name] = runner
+		cmd.setRunners(runner)
+		cmd.init()
 		cmd.parent = c
+		cmd.stmt = c.stmt
+		cmd.output = c.Output()
+
+		c.commands[cmd.Name] = cmd
 	}
+}
+
+// Output returns the io.Writer that the command uses to write output to.
+func (c *Command) Output() io.Writer {
+	if c.output == nil {
+		return os.Stdout
+	}
+
+	return c.output
+}
+
+// SetOutput sets the io.Writer that the command uses to write output to.
+func (c *Command) SetOutput(w io.Writer) {
+	c.output = w
+}
+
+// FullName returns the full name of the command starting from the root.
+func (c *Command) FullName() string {
+	commands := make([]string, 0)
+
+	c.Visit(func(cmd *Command) error {
+		commands = append(commands, cmd.Name)
+		return nil
+	}, VisitStartingAtParent)
+
+	return strings.Join(commands, " ")
+}
+
+// HasFlag checks to see if the provided flag is already added to the command.
+func (c *Command) HasFlag(name, shorthand string) bool {
+	seen := make(map[string]struct{})
+
+	for _, flag := range c.Flags {
+		opt := flag.Options()
+
+		seen[opt.Name] = struct{}{}
+		seen[opt.Shorthand] = struct{}{}
+	}
+
+	_, ok := seen[name]
+	if !ok {
+		return false
+	}
+
+	if shorthand != "" {
+		_, ok = seen[shorthand]
+		if !ok {
+			return false
+		}
+	}
+
+	return true
 }
 
 // PrintHelp prints the command's help.
 func (c *Command) PrintHelp() {
-	if err := renderTemplate(Output, UsageTemplate, c); err != nil {
-		panic(err)
+	c.Output().Write([]byte(c.usage))
+}
+
+// Visit runs fn for each command starting from the top-most parent.
+func (c *Command) Visit(fn VisitFunc, option VisitOption) error {
+	commands := make([]*Command, 0)
+	commands = append(commands, c)
+
+	switch option {
+	case VisitStartingAtChild:
+		for _, cmd := range c.commands {
+			commands = append(commands, cmd)
+		}
+
+		return visit(fn, commands)
+	default:
+		parent := c.parent
+		for parent != nil {
+			commands = append(commands, parent)
+			parent = parent.parent
+		}
+
+		switch option {
+		case VisitStartingAtParent:
+			// We're starting from the rightmost command, so we have to reverse the
+			// slice to get the leftmost command in the first index.
+			for i := len(commands)/2 - 1; i >= 0; i-- {
+				j := len(commands) - i - 1
+				commands[i], commands[j] = commands[j], commands[i]
+			}
+		case VisitStartingAtChildReverse:
+			// `commands` is already in correct order for this visit option.
+		}
+
+		return visit(fn, commands)
+
 	}
 }
 
-// PrintVersion prints the version of the command.
-func (c *Command) PrintVersion() {
-	_, _ = fmt.Fprintln(Output, c.Version)
-}
+// parseCommands is the main method. It adds parent flags (if applicable), sorts
+// commands and flags, generates the usage string, parses the args, sets
+// options, runs the runners, and checks for unknown and required
+// arguments/flags.
+func (c *Command) parseCommands(args []string) error {
+	c.init()
 
-func (c *Command) parseCommands(name string, args []string) error {
-	if len(c.commands) > 0 {
-		c.sortCommands()
+	if err := c.addParentFlags(); err != nil {
+		return err
 	}
+
+	c.sortCommands()
+	c.sortFlags()
+	c.generateUsage()
 
 	for _, arg := range args {
-		if cmd, ok := c.lookupCommand(arg); ok {
-			fullName := fmt.Sprintf("%s %s", name, cmd.Name)
-
-			if err := cmd.addParentFlags(c); err != nil {
-				return err
-			}
-
-			if cmd.Version == "" {
-				cmd.Version = cmd.parent.Version
-			}
-
-			cmd.runner = c.runners[cmd.Name]
-
-			return cmd.parseCommands(fullName, args[1:])
+		if cmd, ok := c.commands[arg]; ok {
+			return cmd.parseCommands(args[1:])
 		}
 	}
 
-	c.fullName = name
-
-	if err := c.parseFlags(args); err != nil {
-		if errors.Is(err, ErrPrintHelp) {
-			c.PrintHelp()
-			return ErrPrintHelp
-		}
-
-		return err
+	if err := c.parseArgs(args); err != nil {
+		return c.errOrPrintHelp(err)
 	}
 
-	if err := c.runner.Run(args); err != nil {
-		if errors.Is(err, ErrPrintHelp) {
-			c.PrintHelp()
-			return ErrPrintHelp
+	if c.optionSetter != nil && c.parent != nil {
+		if err := c.optionSetter.SetOptions(c.parent.Flags); err != nil {
+			return c.errOrPrintHelp(err)
+		}
+	}
+
+	if err := c.Visit(func(cmd *Command) error {
+		if cmd.persistentPreRunner != nil {
+			if err := cmd.persistentPreRunner.PersistentPreRun(); err != nil {
+				return cmd.errOrPrintHelp(err)
+			}
 		}
 
-		return err
+		return nil
+	}, VisitStartingAtParent); err != nil {
+		return c.errOrPrintHelp(err)
+	}
+
+	if c.preRunner != nil {
+		if err := c.preRunner.PreRun(); err != nil {
+			return c.errOrPrintHelp(err)
+		}
+	}
+
+	if err := c.runner.Run(); err != nil {
+		return c.errOrPrintHelp(err)
+	}
+
+	if c.postRunner != nil {
+		if err := c.postRunner.PostRun(); err != nil {
+			return c.errOrPrintHelp(err)
+		}
+	}
+
+	if err := c.Visit(func(cmd *Command) error {
+		if cmd.persistentPostRunner != nil {
+			if err := cmd.persistentPostRunner.PersistentPostRun(); err != nil {
+				return cmd.errOrPrintHelp(err)
+			}
+		}
+
+		return nil
+	}, VisitStartingAtChildReverse); err != nil {
+		return c.errOrPrintHelp(err)
 	}
 
 	return nil
 }
 
-func (c *Command) parseFlags(args []string) error {
-	if err := c.addFlags(); err != nil {
+// init just makes sure slices and maps are initialized before use.
+func (c *Command) init() {
+	if c.Args == nil {
+		c.Args = make(Args, 0)
+	}
+
+	if c.Flags == nil {
+		c.Flags = make(Flags, 0)
+	}
+
+	if c.commands == nil {
+		c.commands = make(map[string]*Command)
+	}
+
+	if c.output == nil {
+		c.SetOutput(os.Stdout)
+	}
+}
+
+// addParentFlags adds the flags the parent currently has to this command.
+func (c *Command) addParentFlags() error {
+	var merr multierror.Error
+
+	if c.parent == nil {
+		return nil
+	}
+
+	for _, flag := range c.Flags {
+		opt := flag.Options()
+		if c.parent.HasFlag(opt.Name, opt.Shorthand) {
+			merr.Append(ErrFlagAlreadyDefined{
+				Name:      opt.Name,
+				Shorthand: opt.Shorthand,
+			})
+		}
+	}
+
+	c.Flags = append(c.Flags, c.parent.Flags...)
+
+	return merr.ErrorOrNil()
+}
+
+// setRunners sets thee
+func (c *Command) setRunners(runner Runner) {
+	if v, ok := runner.(OptionSetter); ok {
+		c.optionSetter = v
+	}
+
+	if v, ok := runner.(PersistentPreRunner); ok {
+		c.persistentPreRunner = v
+	}
+
+	if v, ok := runner.(PreRunner); ok {
+		c.preRunner = v
+	}
+
+	c.runner = runner
+
+	if v, ok := runner.(PostRunner); ok {
+		c.postRunner = v
+	}
+
+	if v, ok := runner.(PersistentPostRunner); ok {
+		c.persistentPostRunner = v
+	}
+}
+
+func (c *Command) parseArgs(args []string) error {
+	if err := c.setValues(args); err != nil {
 		return err
 	}
 
-	c.sortFlags()
-	c.parseUsage()
+	if err := c.checkUnknown(args); err != nil {
+		return err
+	}
 
-	var flagArgs []string
+	return c.checkRequired()
+}
 
+func (c *Command) setValues(args []string) error {
 	for i, arg := range args {
-		// If the current argument isn't a flag, then skip it.
-		if !c.isFlag(arg) {
+		if matchesFlag(arg, HelpFlag) {
+			return ErrPrintHelp
+		}
+
+		if isFlag(arg) {
+			flag := c.Flags.Lookup(arg)
+			if flag == nil {
+				continue
+			}
+
+			if err := flag.Init(); err != nil {
+				return err
+			}
+
+			opt := flag.Options()
+			switch opt.Value.(type) {
+			case *bool:
+				if err := flag.Set("true"); err != nil {
+					return err
+				}
+
+				args = slice.Remove(args, i, i)
+			default:
+				if opt.IsSlice && opt.Separator == 0 {
+					return ErrFlagSliceMustHaveSeparator
+				}
+
+				if err := flag.Set(args[i+1]); err != nil {
+					return err
+				}
+
+				args = slice.Remove(args, i, i+2)
+			}
+		}
+	}
+
+	for i := range args {
+		arg := c.Args.Lookup(i)
+		if arg == nil {
 			continue
 		}
 
-		// Trim the dashes before we check if we've seen this flag
-		// before.
-		arg = strings.TrimLeft(arg, "-")
-
-		flag, ok := c.lookupFlag(arg)
-		if !ok {
-			// This flag is not present in the commands list of flags
-			// therefore it is invalid.
-			err := ErrOptionNotDefined{arg: arg}
-			fmt.Fprintln(Output, err.Error())
-			return ErrPrintHelp
-		}
-
-		option, err := flag.Option()
-		if err != nil {
+		if err := arg.Init(); err != nil {
 			return err
 		}
 
-		if option.Shorthand == HelpFlag.Shorthand || option.Name == HelpFlag.Name {
-			return ErrPrintHelp
-		}
+		buf := slice.Reduce(args[i:], func(a string) bool {
+			return !isFlag(a)
+		})
 
-		if option.Shorthand == VersionFlag.Shorthand || option.Name == VersionFlag.Name {
-			c.PrintVersion()
-			return nil
-		}
-
-		flagArgs = args[i:]
-
-		switch x := flag.(type) {
-		case *BoolFlag:
-			if err := x.Set("true"); err != nil {
-				return err
-			}
-		case *StringSliceFlag:
-			x.Clear()
-
-			for _, v := range flagArgs[1:] {
-				if err := x.Set(v); err != nil {
-					return err
-				}
-			}
-		default:
-			flagArgs = flagArgs[1:]
-
-			if len(flagArgs) > 0 {
-				if err := x.Set(flagArgs[0]); err != nil {
-					return err
-				}
-			}
+		if err := arg.Set(join.Args(buf)); err != nil {
+			return err
 		}
 	}
 
-	return c.checkRequiredOptions()
+	return nil
 }
 
-func (c *Command) parseUsage() {
-	for _, flag := range c.formal {
-		name := colorize(ColorGreen, "--%s", flag.Name)
-		shorthand := colorize(ColorGreen, "-%s", flag.Shorthand)
-		usage := flag.Desc
+func (c *Command) checkUnknown(args []string) error {
+	seen := make(map[string]struct{})
 
-		if flag.Shorthand != "" {
-			c.flagUsage += fmt.Sprintf("    %s, %s\n\t    %s\n\n", shorthand, name, usage)
-		} else {
-			c.flagUsage += fmt.Sprintf("        %s\n\t    %s\n\n", name, usage)
+	for _, cmd := range c.getCommands() {
+		seen[cmd.Name] = struct{}{}
+	}
+
+	for _, flag := range c.Flags {
+		opt := flag.Options()
+		shorthand := fmt.Sprintf("-%s", opt.Shorthand)
+		name := fmt.Sprintf("--%s", opt.Name)
+
+		if opt.Shorthand != "" {
+			seen[shorthand] = struct{}{}
+		}
+
+		if opt.Name != "" {
+			seen[name] = struct{}{}
+		}
+
+		// If the flag type is a slice, we have to remove the brackets that
+		// fmt.Sprint will add, and rejoin the string with the flags separator.
+		s := join.WithSeparator(trimBrackets(flag), opt.Separator)
+		seen[s] = struct{}{}
+	}
+
+	for _, arg := range c.Args {
+		// If the arg type is a slice, we have to remove the brackets that
+		// fmt.Sprint will add.
+		for _, s := range strings.Split(trimBrackets(arg), " ") {
+			seen[s] = struct{}{}
 		}
 	}
 
-	maxLen := findMaxLength(c.commands)
+	for _, arg := range args {
+		if _, ok := seen[arg]; !ok {
+			start, end := c.stmt.Lookup(arg).Pos()
 
+			return ErrUnknown{
+				Input:    c.stmt.String(),
+				Arg:      arg,
+				StartPos: start,
+				EndPos:   end,
+			}
+		}
+	}
+
+	return nil
+}
+
+func (c *Command) checkRequired() error {
+	var merr multierror.Error
+
+	for _, flag := range c.Flags {
+		opt := flag.Options()
+		if opt.Required && (!opt.HasBeenSet || trimBrackets(flag) == "") {
+			merr.Append(ErrFlagRequired{
+				Name:      opt.Name,
+				Shorthand: opt.Shorthand,
+			})
+		}
+	}
+
+	for _, arg := range c.Args {
+		opt := arg.Options()
+		if opt.Required && !opt.HasBeenSet {
+			merr.Append(ErrArgRequired{
+				Name: opt.Name,
+			})
+		}
+	}
+
+	return merr.ErrorOrNil()
+}
+
+// errOrPrintHelp checks if the error returned is ErrPrintHelp. If so, then the
+// user intends to print help text to the command's output and not actually
+// return an error.
+func (c *Command) errOrPrintHelp(err error) error {
+	if errors.Is(err, ErrPrintHelp) {
+		c.PrintHelp()
+		return nil
+	}
+
+	return err
+}
+
+func (c *Command) getCommands() []*Command {
+	commands := make([]*Command, 0, len(c.commands))
 	for _, cmd := range c.commands {
-		c.commandUsage += fmt.Sprintf("    %s%s\n", rpad(colorize(ColorGreen, cmd.Name), computePadding(maxLen, cmd.Name)), cmd.Desc)
-	}
-}
-
-func (c *Command) addParentFlags(parent *Command) error {
-	seen := make(map[Flag]struct{})
-
-	for _, flag := range c.Flags {
-		seen[flag] = struct{}{}
+		commands = append(commands, cmd)
 	}
 
-	for _, flag := range parent.Flags {
-		if _, ok := seen[flag]; !ok {
-			c.Flags = append(c.Flags, flag)
-		}
-	}
+	sort.Sort(SortCommandsByName(commands))
 
-	return nil
-}
-
-func (c *Command) addFlags() error {
-	if c.Flags == nil {
-		c.Flags = make([]Flag, 0)
-	}
-
-	if c.actual == nil {
-		c.actual = make(map[Option]Flag)
-	}
-
-	if c.formal == nil {
-		c.formal = make([]Option, 0)
-	}
-
-	seen := make(map[Flag]struct{})
-
-	for _, flag := range c.Flags {
-		seen[flag] = struct{}{}
-	}
-
-	if _, ok := seen[&HelpFlag]; !ok {
-		c.Flags = append(c.Flags, &HelpFlag)
-	}
-
-	if _, ok := seen[&VersionFlag]; !ok {
-		c.Flags = append(c.Flags, &VersionFlag)
-	}
-
-	for _, flag := range c.Flags {
-		if err := c.addFlag(flag); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (c *Command) addFlag(flag Flag) error {
-	opt, err := flag.Option()
-	if err != nil {
-		return err
-	}
-
-	c.actual[opt] = flag
-	c.formal = append(c.formal, opt)
-	return nil
-}
-
-func (c *Command) checkRequiredOptions() error {
-	result := &multierror.Error{}
-
-	for _, option := range c.formal {
-		if !option.HasBeenSet() && option.Required {
-			var err error
-
-			if option.Shorthand != "" {
-				err = fmt.Errorf(colorize(ColorRed, "-%s, --%s is required", option.Shorthand, option.Name))
-			} else {
-				err = fmt.Errorf(colorize(ColorRed, "--%s is required", option.Name))
-			}
-
-			_ = multierror.Append(result, err)
-		}
-	}
-
-	return result.ErrorOrNil()
+	return commands
 }
 
 func (c *Command) sortCommands() {
-	sort.Sort(SortCommandsByName(c.commands))
+	commands := c.getCommands()
+	m := make(map[string]*Command)
+	for _, cmd := range commands {
+		m[cmd.Name] = cmd
+	}
+	c.commands = m
 }
 
+// sortFlags sorts flags by name.
 func (c *Command) sortFlags() {
-	sort.Sort(SortOptionsByName(c.formal))
+	sort.Sort(SortFlagsByName(c.Flags))
 }
 
-func (c *Command) lookupCommand(arg string) (*Command, bool) {
-	for _, cmd := range c.commands {
-		if cmd.Name == arg {
-			return cmd, true
+// generateUsage generates usage strings for commands, flags, and arguments.
+func (c *Command) generateUsage() {
+	builder := help.NewBuilder()
+	indent := 4
+	padding := 4
+	description := c.LongDesc
+	if description == "" {
+		description = formatDesc(c.Desc)
+	}
+
+	builder.Text(description)
+	builder.Newline()
+	builder.Newline()
+	builder.Header("USAGE:")
+	builder.Newline()
+	builder.Text(builder.WithIndent(c.FullName(), 4))
+
+	if len(c.Flags) > 0 {
+		builder.Text(" [flags]")
+	}
+
+	for _, arg := range c.Args {
+		opt := arg.Options()
+		if opt.IsSlice {
+			builder.Text(" <%s>...", opt.Name)
+		} else {
+			builder.Text(" <%s>", opt.Name)
 		}
 	}
-	return nil, false
-}
 
-func (c *Command) lookupFlag(arg string) (Flag, bool) {
-	for option, flag := range c.actual {
-		if option.Shorthand == arg || option.Name == arg {
-			return flag, true
+	if len(c.commands) > 0 {
+		builder.Text(" [command]")
+	}
+
+	if len(c.commands) > 0 {
+		commands := tablewriter.NewWriter()
+
+		builder.Newline()
+		builder.Newline()
+		builder.Header("COMMANDS:")
+		builder.Newline()
+
+		for _, cmd := range c.getCommands() {
+			commands.AddLine(
+				tablewriter.Cell{
+					Indent:  indent,
+					Padding: padding,
+					Text:    builder.Green(cmd.Name),
+				},
+				tablewriter.Cell{
+					Padding: padding,
+					Text:    formatDesc(cmd.Desc),
+				},
+			)
 		}
+
+		builder.Table(commands)
 	}
-	return nil, false
+
+	if len(c.Flags) > 0 {
+		flags := tablewriter.NewWriter()
+
+		builder.Newline()
+		builder.Newline()
+		builder.Header("FLAGS:")
+		builder.Newline()
+
+		for _, flag := range c.Flags {
+			opt := flag.Options()
+
+			flags.AddLine(
+				tablewriter.Cell{
+					Indent: indent,
+					Text:   builder.Green("-%s", opt.Shorthand),
+					Suffix: ", ",
+				},
+				tablewriter.Cell{
+					Padding: padding,
+					Text:    builder.Green("--%s", opt.Name),
+				},
+				tablewriter.Cell{
+					Text: formatDesc(opt.Desc),
+				},
+			)
+		}
+
+		builder.Table(flags)
+	}
+
+	if len(c.Args) > 0 {
+		args := tablewriter.NewWriter()
+
+		builder.Newline()
+		builder.Newline()
+		builder.Header("ARGS:")
+		builder.Newline()
+
+		for _, arg := range c.Args {
+			opt := arg.Options()
+			text := builder.Green("<%s>", opt.Name)
+			if opt.IsSlice {
+				text += builder.Green("...")
+			}
+
+			args.AddLine(
+				tablewriter.Cell{
+					Indent:  indent,
+					Padding: padding,
+					Text:    text,
+				},
+				tablewriter.Cell{
+					Text: formatDesc(opt.Desc),
+				},
+			)
+		}
+
+		builder.Table(args)
+	}
+
+	if len(c.commands) > 0 {
+		builder.Newline()
+		builder.Newline()
+		builder.Text("Use \"%s [command] --help\" for more information about a command.", c.FullName())
+	}
+
+	c.usage = builder.String()
 }
 
-func (c *Command) isFlag(arg string) bool {
-	if strings.HasPrefix(arg, "-") || strings.HasPrefix(arg, "--") {
-		return true
-	}
-	return false
-}
-
+// SortCommandsByName sorts commands by name.
 type SortCommandsByName []*Command
 
-func (n SortCommandsByName) Len() int           { return len(n) }
-func (n SortCommandsByName) Swap(i, j int)      { n[i], n[j] = n[j], n[i] }
-func (n SortCommandsByName) Less(i, j int) bool { return n[i].Name < n[j].Name }
+func (n SortCommandsByName) Len() int      { return len(n) }
+func (n SortCommandsByName) Swap(i, j int) { n[i], n[j] = n[j], n[i] }
+func (n SortCommandsByName) Less(i, j int) bool {
+	return strings.Map(unicode.ToUpper, n[i].Name) < strings.Map(unicode.ToUpper, n[j].Name)
+}
+
+// Execute parses args and sets up the root command and it's children.
+func Execute(runner Runner, args []string) error {
+	p := parser.New(args)
+
+	cmd := runner.Init()
+	cmd.setRunners(runner)
+	cmd.init()
+	cmd.stmt = p.Parse()
+	cmd.output = os.Stdout
+
+	if !cmd.HasFlag(HelpFlag.Name, HelpFlag.Shorthand) {
+		cmd.Flags = append(cmd.Flags, HelpFlag)
+	}
+
+	return cmd.parseCommands(args[1:])
+}

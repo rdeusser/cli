@@ -4,47 +4,67 @@ confidence = 0.8
 errorCode = 0
 warningCode = 0
 
-# Enable all available rules.
-enableAllRules = true
+# Disable all available rules by default.
+enableAllRules = false
 
 # Rule tuning.
-[rule.add-constant]
-  arguments = [{maxLitCount = "5", allowStrs = "\"\"", allowInts = "0,1", allowFloats = "0.0"}]
-
 [rule.argument-limit]
   arguments = [4]
 
 [rule.cognitive-complexity]
-  arguments = [9]
+  arguments = [50]
 
 [rule.cyclomatic]
-  arguments = [8]
+  arguments = [50]
+
+[rule.duplicated-imports]
+[rule.early-return]
+[rule.empty-block]
+[rule.error-naming]
+[rule.error-return]
+[rule.error-strings]
+[rule.errorf]
+[rule.flag-parameter]
 
 [rule.function-result-limit]
   arguments = [3]
 
+[rule.get-return]
+[rule.identical-branches]
+[rule.if-return]
+[rule.increment-decrement]
+[rule.indent-error-flow]
+
+[rule.imports-blacklist]
+  arguments = ["github.com/pkg/errors"]
+
+[rule.import-shadowing]
+[rule.modifies-parameter]
+[rule.modifies-value-receiver]
+[rule.nested-structs]
+[rule.optimize-operands-order]
+[rule.range]
+[rule.range-val-in-closure]
+[rule.range-val-address]
+[rule.receiver-naming]
+[rule.redefines-builtin-id]
+[rule.string-of-int]
+[rule.struct-tag]
+[rule.superfluous-else]
+[rule.time-equal]
+[rule.time-naming]
+
 [rule.var-naming]
   arguments = [[""], ["ID", "VM"]]
 
-# Disabled rules.
-[rule.banned-characters]
-  disabled = true
-
-[rule.exported]
-  disabled = true
-
-[rule.file-header]
-  disabled = true
-
-[rule.function-length]
-  disabled = true
-
-[rule.line-length-limit]
-  disabled = true
-
-[rule.max-public-structs]
-  disabled = true
-
-# Project supports Go 1.17 and up so we can't enable this yet.
+[rule.var-declaration]
+[rule.unconditional-recursion]
+[rule.unexported-naming]
+[rule.unexported-return]
+[rule.unnecessary-stmt]
+[rule.unreachable-code]
+[rule.unused-parameter]
+[rule.unused-receiver]
 [rule.use-any]
-  disabled = true
+[rule.useless-break]
+[rule.waitgroup-by-value]

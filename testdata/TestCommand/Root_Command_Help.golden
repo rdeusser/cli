@@ -1,16 +1,13 @@
-Test CLI
+A test binary
 
-USAGE:
-    test [FLAGS] [command] [ARGUMENTS...]
+[33mUSAGE:[0m
+    test [flags] [command]
 
-SUBCOMMANDS:
-    server    Runs a server for the test command (not really)
+[33mSUBCOMMANDS:[0m
+    [32mserver[0m    Do something with a test server
 
-FLAGS:
-    -h, --help
-	    show help
-
-    -V, --version
-	    print the version
+[33mFLAGS:[0m
+    [32m-h[0m, [32m--help[0m        Print help information
+    [32m-V[0m, [32m--version[0m     Print version information
 
 Use "test [command] --help" for more information about a command.

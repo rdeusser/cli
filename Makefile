@@ -20,7 +20,7 @@ export GO111MODULE
 GOIMPORTS_VERSION             ?= master
 GOIMPORTS                     ?= $(GOBIN)/goimports
 
-REVIVE_VERSION                ?= v1.2.1
+REVIVE_VERSION                ?= v1.2.3
 REVIVE                        ?= $(GOBIN)/revive
 
 GEN_ENUM_VERSION              ?= main

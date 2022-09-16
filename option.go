@@ -1,53 +1,26 @@
 package cli
 
-import (
-	"flag"
-)
-
-type TypeGetter interface {
-	Type() OptionType
+type OptionSetter interface {
+	SetOptions(flags Flags) error
 }
 
-type OptionGetter interface {
-	Option() (Option, error)
+type option interface {
+	Init() error
+	Set(string) error
+	String() string
+	Options() Options
 }
 
-//go:generate stringer -type OptionType -linecomment
-type OptionType int
-
-const (
-	Invalid     OptionType = iota // invalid
-	Bool                          // bool
-	String                        // string
-	Int                           // int
-	Float64                       // float64
-	Duration                      // time.Duration
-	StringSlice                   // []string
-)
-
-// Option represents a flag or argument.
-type Option struct {
-	optType OptionType
-
-	Name      string
-	Shorthand string
-	Desc      string
-	Default   string
-	Value     flag.Value
-	EnvVar    string
-	Required  bool
+type Options struct {
+	IsSlice    bool
+	Name       string
+	Shorthand  string
+	Desc       string
+	Separator  byte
+	Layout     string
+	Default    any
+	Value      any
+	EnvVar     any
+	Required   bool
+	HasBeenSet bool
 }
-
-func (o Option) Type() OptionType {
-	return o.optType
-}
-
-func (o Option) HasBeenSet() bool {
-	return o.Value.String() != ""
-}
-
-type SortOptionsByName []Option
-
-func (n SortOptionsByName) Len() int           { return len(n) }
-func (n SortOptionsByName) Swap(i, j int)      { n[i], n[j] = n[j], n[i] }
-func (n SortOptionsByName) Less(i, j int) bool { return n[i].Name < n[j].Name }

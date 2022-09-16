@@ -1,0 +1,13 @@
+Test bool arg
+
+[33mUSAGE:[0m
+    test-bool-arg [flags] <test-bool-arg>
+
+[33mARGS:[0m
+    [32m<test-bool-arg>[0m     test bool (type: bool)
+
+[33mFLAGS:[0m
+    [32m-h[0m, [32m--help[0m        Print help information
+    [32m-V[0m, [32m--version[0m     Print version information
+
+Use "test-bool-arg --help" for more information about a command.
