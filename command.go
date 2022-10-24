@@ -215,13 +215,27 @@ func (c *Command) parseCommands(args []string) error {
 	c.sortFlags()
 	c.generateUsage()
 
-	for _, arg := range args {
+	noFlags, err := c.parseFlags(args)
+	if err != nil {
+		return c.errOrPrintHelp(err)
+	}
+
+	for _, arg := range noFlags {
 		if cmd, ok := c.commands[arg]; ok {
-			return cmd.parseCommands(args[1:])
+			return cmd.parseCommands(noFlags)
 		}
 	}
 
-	if err := c.parseArgs(args); err != nil {
+	noFlagsOrArgs, err := c.parseArgs(noFlags)
+	if err != nil {
+		return c.errOrPrintHelp(err)
+	}
+
+	if err := c.checkUnknown(noFlagsOrArgs); err != nil {
+		return c.errOrPrintHelp(err)
+	}
+
+	if err := c.checkRequired(); err != nil {
 		return c.errOrPrintHelp(err)
 	}
 
@@ -345,57 +359,53 @@ func (c *Command) setRunners(runner Runner) {
 	}
 }
 
-// parseArgs sets the values for flags and arguments, checks for unknown
-// arguments, and that all required flags and arguments have been set.
-func (c *Command) parseArgs(args []string) error {
-	if err := c.setValues(args); err != nil {
-		return err
-	}
+func (c *Command) parseFlags(args []string) ([]string, error) {
+	buf := args
 
-	if err := c.checkUnknown(args); err != nil {
-		return err
-	}
-
-	return c.checkRequired()
-}
-
-func (c *Command) setValues(args []string) error {
 	for i, arg := range args {
 		if matchesFlag(arg, HelpFlag) {
-			return ErrPrintHelp
+			return buf, ErrPrintHelp
 		}
 
-		if isFlag(arg) {
-			flag := c.Flags.Lookup(arg)
-			if flag == nil {
-				continue
+		if !isFlag(arg) {
+			continue
+		}
+
+		flag := c.Flags.Lookup(arg)
+		if flag == nil {
+			continue
+		}
+
+		if err := flag.Init(); err != nil {
+			return buf, err
+		}
+
+		opt := flag.Options()
+		switch opt.Value.(type) {
+		case *bool:
+			if err := flag.Set("true"); err != nil {
+				return buf, err
 			}
 
-			if err := flag.Init(); err != nil {
-				return err
+			buf = slice.Remove(buf, i, i+1)
+		default:
+			if opt.IsSlice && opt.Separator == 0 {
+				return buf, ErrFlagSliceMustHaveSeparator
 			}
 
-			opt := flag.Options()
-			switch opt.Value.(type) {
-			case *bool:
-				if err := flag.Set("true"); err != nil {
-					return err
-				}
-
-				args = slice.Remove(args, i, i)
-			default:
-				if opt.IsSlice && opt.Separator == 0 {
-					return ErrFlagSliceMustHaveSeparator
-				}
-
-				if err := flag.Set(args[i+1]); err != nil {
-					return err
-				}
-
-				args = slice.Remove(args, i, i+2)
+			if err := flag.Set(args[i+1]); err != nil {
+				return buf, err
 			}
+
+			buf = slice.Remove(buf, i, i+1)
 		}
 	}
+
+	return buf, nil
+}
+
+func (c *Command) parseArgs(args []string) ([]string, error) {
+	buf := make([]string, 0)
 
 	for i := range args {
 		arg := c.Args.Lookup(i)
@@ -404,19 +414,19 @@ func (c *Command) setValues(args []string) error {
 		}
 
 		if err := arg.Init(); err != nil {
-			return err
+			return buf, err
 		}
 
-		buf := slice.Reduce(args[i:], func(a string) bool {
+		buf = slice.Reduce(args[i:], func(a string) bool {
 			return !isFlag(a)
 		})
 
 		if err := arg.Set(join.Args(buf)); err != nil {
-			return err
+			return buf, err
 		}
 	}
 
-	return nil
+	return buf, nil
 }
 
 func (c *Command) checkUnknown(args []string) error {
@@ -664,7 +674,6 @@ func (n SortCommandsByName) Less(i, j int) bool {
 // Execute parses args and sets up the root command and it's children.
 func Execute(runner Runner, args []string) error {
 	p := parser.New(args)
-
 	cmd := runner.Init()
 	cmd.setRunners(runner)
 	cmd.init()
