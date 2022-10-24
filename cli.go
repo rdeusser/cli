@@ -10,13 +10,10 @@ import (
 // ValueOf looks up the name of a flag and returns the value that it was set
 // to. It's main use should be in the SetOptions method.
 func ValueOf[T Value](flags Flags, name string) T {
-	flag := flags.Lookup(name)
-	if flag != nil && flag.Options().HasBeenSet {
-		opt := flag.Options()
-		// No need to check the error here. That should have been done during
-		// the parsing phase.
-		value, _ := parseValue[T](opt.Value, opt.Separator, opt.Layout)
-		return value
+	option := flags.Lookup(name)
+	if option != nil && option.Options().HasBeenSet {
+		flag := option.(*Flag[T])
+		return *flag.Value
 	}
 
 	return *new(T)
