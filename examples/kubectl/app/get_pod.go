@@ -7,6 +7,7 @@ import (
 )
 
 type GetPodCommand struct {
+	Debug     bool
 	Names     []string
 	Namespace string
 }
@@ -33,11 +34,14 @@ func (gpc *GetPodCommand) Init() *cli.Command {
 	return cmd
 }
 
+// SetOptions is how we get flag values from parent commands. The root command
+// has a debug flag. We don't want to copy and paste that flag to every command
+// nor do we want to take that flag and put it in a different package so all the
+// other commands can import it. We simply need the value. SetOptions lets us
+// get that value.
 func (gpc *GetPodCommand) SetOptions(flags cli.Flags) error {
-	namespace := flags.Lookup("namespace")
-	if namespace != nil {
-		gpc.Namespace = namespace.String()
-	}
+	gpc.Debug = cli.ValueOf[bool](flags, "debug")
+	gpc.Namespace = cli.ValueOf[string](flags, "namespace")
 
 	return nil
 }

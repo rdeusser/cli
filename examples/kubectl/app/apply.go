@@ -7,6 +7,7 @@ import (
 )
 
 type ApplyCommand struct {
+	Debug    bool
 	Filename cli.Path
 }
 
@@ -26,6 +27,17 @@ func (ac *ApplyCommand) Init() *cli.Command {
 	}
 
 	return cmd
+}
+
+// SetOptions is how we get flag values from parent commands. The root command
+// has a debug flag. We don't want to copy and paste that flag to every command
+// nor do we want to take that flag and put it in a different package so all the
+// other commands can import it. We simply need the value. SetOptions lets us
+// get that value.
+func (ac *ApplyCommand) SetOptions(flags cli.Flags) error {
+	ac.Debug = cli.ValueOf[bool](flags, "debug")
+
+	return nil
 }
 
 func (ac *ApplyCommand) Run() error {
