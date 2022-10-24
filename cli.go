@@ -7,6 +7,21 @@ import (
 	"unicode"
 )
 
+// ValueOf looks up the name of a flag and returns the value that it was set
+// to. It's main use should be in the SetOptions method.
+func ValueOf[T Value](flags Flags, name string) T {
+	flag := flags.Lookup(name)
+	if flag != nil && flag.Options().HasBeenSet {
+		opt := flag.Options()
+		// No need to check the error here. That should have been done during
+		// the parsing phase.
+		value, _ := parseValue[T](opt.Value, opt.Separator, opt.Layout)
+		return value
+	}
+
+	return *new(T)
+}
+
 func visit(fn func(*Command) error, commands []*Command) error {
 	for _, cmd := range commands {
 		if err := fn(cmd); err != nil {
