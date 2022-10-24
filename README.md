@@ -1,18 +1,13 @@
 # cli
 
-A better package for building command line apps in Go with minimal dependencies.
+A CLI library for Go using generics.
 
-Well, better is objective but I think it's pretty great.
+There are a few really nice CLI libraries for Go like spf13/cobra, urfave/cli,
+alecthomas/kingpin, etc. Even the builtin flag library isn't too bad. I've
+created a lot of CLI tools over the years in Go and while Cobra came the
+closest, something about it always felt wrong. So this library is my standard on
+how constructing a CLI should look.
 
 ## Usage
 
-You can structure your app however you want, but typically it looks like this:
-
-```
-{app-name}
-├── app
-│   └── create.go
-└── main.go
-```
-
-See the [examples](examples) for more.
+See the [examples](examples).
