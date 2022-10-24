@@ -41,6 +41,12 @@ func (ac *ApplyCommand) SetOptions(flags cli.Flags) error {
 }
 
 func (ac *ApplyCommand) Run() error {
+	if ac.Debug {
+		fmt.Println("Debug mode is on")
+	} else {
+		fmt.Println("Debug mode is off")
+	}
+
 	fmt.Printf("Filename: %s\n", &ac.Filename)
 	return nil
 }

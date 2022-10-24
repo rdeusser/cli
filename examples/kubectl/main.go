@@ -9,28 +9,32 @@ import (
 )
 
 type RootCommand struct {
-	Debug     bool
-	Namespace string
+	Debug         bool
+	Namespace     string
+	AllNamespaces bool
 }
 
-func (*RootCommand) Init() *cli.Command {
+func (rc *RootCommand) Init() *cli.Command {
 	cmd := &cli.Command{
 		Name: "kubectl",
 		Desc: "kubectl controls the Kubernetes cluster manager",
 		Flags: cli.Flags{
 			&cli.Flag[bool]{
-				Name: "debug",
-				Desc: "Set logging level to debug",
+				Name:  "debug",
+				Desc:  "Set logging level to debug",
+				Value: &rc.Debug,
 			},
 			&cli.Flag[string]{
 				Name:      "namespace",
 				Shorthand: "n",
 				Desc:      "Namespace to operate on",
 				Default:   "default",
+				Value:     &rc.Namespace,
 			},
 			&cli.Flag[bool]{
 				Shorthand: "A",
 				Desc:      "All namespaces",
+				Value:     &rc.AllNamespaces,
 			},
 		},
 	}
